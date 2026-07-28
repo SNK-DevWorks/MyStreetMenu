@@ -1,0 +1,266 @@
+[
+  {
+    "id": 1,
+    "title": "Classic Cheeseburger",
+    "description": "Juicy beef patty, melted cheddar, fresh lettuce & smoky sauce in a soft bun.",
+    "price": "₹199",
+    "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1999&auto=format&fit=crop",
+    "badgeLabel": "Top Pick",
+    "category": "Burgers",
+    "foodType": "non-veg",
+    "isBestseller": true,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(56, 45, 41, 0.85)",
+      "end": "rgba(40, 30, 25, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 2450, "likes": 580 },
+      "thisWeek": { "views": 9800, "likes": 2100 },
+      "thisMonth": { "views": 34000, "likes": 8900 }
+    }
+  },
+  {
+    "id": 2,
+    "title": "Honey Glazed Chicken",
+    "description": "Crispy chicken in sweet honey-soy glaze served on jasmine rice.",
+    "price": "₹249",
+    "image": "https://images.unsplash.com/photo-1623341214825-9f4f963727da?q=80&w=2070&auto=format&fit=crop",
+    "badgeLabel": "Chef Special",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": false,
+    "isTodaysSpecial": true,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(75, 75, 75, 0.85)",
+      "end": "rgba(35, 35, 35, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 2100, "likes": 490 },
+      "thisWeek": { "views": 11200, "likes": 2650 },
+      "thisMonth": { "views": 39000, "likes": 9800 }
+    }
+  },
+  {
+    "id": 3,
+    "title": "Spicy Fried Chicken",
+    "description": "Crispy golden fried chicken with a fiery kick & tangy dipping sauce.",
+    "price": "₹179",
+    "image": "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?q=80&w=2070&auto=format&fit=crop",
+    "badgeLabel": "Hot Deal",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": true,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(128, 55, 35, 0.85)",
+      "end": "rgba(80, 25, 15, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1890, "likes": 420 },
+      "thisWeek": { "views": 7400, "likes": 1650 },
+      "thisMonth": { "views": 28000, "likes": 6900 }
+    }
+  },
+  {
+    "id": 4,
+    "title": "Artisan Truffle Pizza",
+    "description": "Sourdough topped with black truffle cream, mozzarella & fresh mushrooms.",
+    "price": "₹299",
+    "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=2070&auto=format&fit=crop",
+    "badgeLabel": "Popular",
+    "category": "Pizzas",
+    "foodType": "veg",
+    "isBestseller": false,
+    "isTodaysSpecial": true,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(50, 60, 45, 0.85)",
+      "end": "rgba(25, 35, 20, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1750, "likes": 390 },
+      "thisWeek": { "views": 10500, "likes": 2400 },
+      "thisMonth": { "views": 41000, "likes": 10200 }
+    }
+  },
+  {
+    "id": 5,
+    "title": "Loaded Taco Platter",
+    "description": "3 crispy tacos packed with seasoned meat, fresh guac, salsa & queso.",
+    "price": "₹329",
+    "image": "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?q=80&w=1980&auto=format&fit=crop",
+    "badgeLabel": "Bestseller",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": true,
+    "isTodaysSpecial": true,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(110, 45, 25, 0.85)",
+      "end": "rgba(70, 20, 10, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1200, "likes": 280 },
+      "thisWeek": { "views": 12800, "likes": 3100 },
+      "thisMonth": { "views": 43000, "likes": 11500 }
+    }
+  },
+  {
+    "id": 6,
+    "title": "Creamy Alfredo Pasta",
+    "description": "Penne tossed in rich garlic parmesan cream sauce with grilled chicken.",
+    "price": "₹279",
+    "image": "https://images.unsplash.com/photo-1621996346565-e3d5d6281292?q=80&w=2070&auto=format&fit=crop",
+    "badgeLabel": "Trending",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": false,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(65, 55, 40, 0.85)",
+      "end": "rgba(35, 30, 20, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1450, "likes": 340 },
+      "thisWeek": { "views": 11900, "likes": 2850 },
+      "thisMonth": { "views": 37000, "likes": 9100 }
+    }
+  },
+  {
+    "id": 7,
+    "title": "Smoked BBQ Ribs",
+    "description": "Slow-smoked tender pork ribs glazed with signature sweet & sticky BBQ sauce.",
+    "price": "₹399",
+    "image": "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=2069&auto=format&fit=crop",
+    "badgeLabel": "Fan Favorite",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": true,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(90, 30, 20, 0.85)",
+      "end": "rgba(50, 15, 10, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1100, "likes": 260 },
+      "thisWeek": { "views": 11400, "likes": 2700 },
+      "thisMonth": { "views": 40500, "likes": 10800 }
+    }
+  },
+  {
+    "id": 8,
+    "title": "Avocado Salmon Bowl",
+    "description": "Fresh salmon, sliced avocado, edamame & sesame jasmine rice.",
+    "price": "₹359",
+    "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2080&auto=format&fit=crop",
+    "badgeLabel": "Healthy Choice",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": false,
+    "isTodaysSpecial": true,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(35, 65, 45, 0.85)",
+      "end": "rgba(15, 40, 25, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1350, "likes": 310 },
+      "thisWeek": { "views": 10900, "likes": 2550 },
+      "thisMonth": { "views": 36000, "likes": 8700 }
+    }
+  },
+  {
+    "id": 9,
+    "title": "Gourmet Wagyu Slider",
+    "description": "Premium wagyu beef sliders with caramelized onions & truffle mayo.",
+    "price": "₹449",
+    "image": "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?q=80&w=2080&auto=format&fit=crop",
+    "badgeLabel": "#1 Pick",
+    "category": "Burgers",
+    "foodType": "non-veg",
+    "isBestseller": true,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(60, 40, 35, 0.85)",
+      "end": "rgba(35, 20, 15, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1250, "likes": 290 },
+      "thisWeek": { "views": 10100, "likes": 2300 },
+      "thisMonth": { "views": 52000, "likes": 14200 }
+    }
+  },
+  {
+    "id": 10,
+    "title": "Seafood Paella Fiesta",
+    "description": "Saffron rice cooked with fresh prawns, mussels & calamari rings.",
+    "price": "₹499",
+    "image": "https://images.unsplash.com/photo-1534080564583-6be75777b70a?q=80&w=2070&auto=format&fit=crop",
+    "badgeLabel": "Special",
+    "category": "Mains",
+    "foodType": "non-veg",
+    "isBestseller": false,
+    "isTodaysSpecial": true,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(100, 50, 30, 0.85)",
+      "end": "rgba(60, 25, 15, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 980, "likes": 220 },
+      "thisWeek": { "views": 9200, "likes": 2050 },
+      "thisMonth": { "views": 48000, "likes": 13100 }
+    }
+  },
+  {
+    "id": 11,
+    "title": "Stone-Baked Margherita",
+    "description": "San Marzano tomatoes, fresh buffalo mozzarella, basil & extra virgin olive oil.",
+    "price": "₹269",
+    "image": "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=2070&auto=format&fit=crop",
+    "badgeLabel": "Hero Item",
+    "category": "Pizzas",
+    "foodType": "veg",
+    "isBestseller": true,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(110, 40, 30, 0.85)",
+      "end": "rgba(60, 20, 15, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1600, "likes": 370 },
+      "thisWeek": { "views": 9600, "likes": 2200 },
+      "thisMonth": { "views": 46000, "likes": 12400 }
+    }
+  },
+  {
+    "id": 12,
+    "title": "Berry Acai Supreme",
+    "description": "Organic acai smoothie bowl topped with fresh berries, chia seeds & granola.",
+    "price": "₹229",
+    "image": "https://images.unsplash.com/photo-1590301157890-4810ed352733?q=80&w=1936&auto=format&fit=crop",
+    "badgeLabel": "Most Loved",
+    "category": "Beverages",
+    "foodType": "veg",
+    "isBestseller": false,
+    "isTodaysSpecial": false,
+    "isAvailable": true,
+    "gradientColors": {
+      "mid": "rgba(80, 30, 70, 0.85)",
+      "end": "rgba(45, 15, 40, 0.98)"
+    },
+    "stats": {
+      "today": { "views": 1400, "likes": 320 },
+      "thisWeek": { "views": 8900, "likes": 1950 },
+      "thisMonth": { "views": 44000, "likes": 11800 }
+    }
+  }
+]
