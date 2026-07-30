@@ -8,14 +8,22 @@ import { analyticsEvents } from './schema/analytics-events';
 import { subscriptions } from './schema/subscriptions';
 
 // ── User Relations ──────────────────────────────────────
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   shops: many(shops),
+  creator: one(users, {
+    fields: [users.createdBy],
+    references: [users.id],
+  }),
 }));
 
 // ── Shop Relations ──────────────────────────────────────
 export const shopsRelations = relations(shops, ({ one, many }) => ({
   user: one(users, {
     fields: [shops.userId],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [shops.createdBy],
     references: [users.id],
   }),
   categories: many(categories),
@@ -31,6 +39,10 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     fields: [categories.shopId],
     references: [shops.id],
   }),
+  creator: one(users, {
+    fields: [categories.createdBy],
+    references: [users.id],
+  }),
   menuItems: many(menuItems),
 }));
 
@@ -44,6 +56,10 @@ export const menuItemsRelations = relations(menuItems, ({ one }) => ({
     fields: [menuItems.categoryId],
     references: [categories.id],
   }),
+  creator: one(users, {
+    fields: [menuItems.createdBy],
+    references: [users.id],
+  }),
 }));
 
 // ── Promotion Relations ─────────────────────────────────
@@ -51,6 +67,10 @@ export const promotionsRelations = relations(promotions, ({ one }) => ({
   shop: one(shops, {
     fields: [promotions.shopId],
     references: [shops.id],
+  }),
+  creator: one(users, {
+    fields: [promotions.createdBy],
+    references: [users.id],
   }),
 }));
 
@@ -60,6 +80,10 @@ export const analyticsEventsRelations = relations(analyticsEvents, ({ one }) => 
     fields: [analyticsEvents.shopId],
     references: [shops.id],
   }),
+  creator: one(users, {
+    fields: [analyticsEvents.createdBy],
+    references: [users.id],
+  }),
 }));
 
 // ── Subscription Relations ──────────────────────────────
@@ -67,5 +91,9 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   shop: one(shops, {
     fields: [subscriptions.shopId],
     references: [shops.id],
+  }),
+  creator: one(users, {
+    fields: [subscriptions.createdBy],
+    references: [users.id],
   }),
 }));

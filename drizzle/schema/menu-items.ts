@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, numeric, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
 import { shops } from './shops';
 import { categories } from './categories';
+import { users } from './users';
 
 export const menuItems = pgTable('menu_items', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -15,6 +16,7 @@ export const menuItems = pgTable('menu_items', {
   isSoldOut: boolean('is_sold_out').notNull().default(false),
   isTodaysSpecial: boolean('is_todays_special').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

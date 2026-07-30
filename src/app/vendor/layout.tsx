@@ -21,6 +21,8 @@ import {
   Megaphone,
   CreditCard,
   LayoutTemplate,
+  MapPin,
+  ExternalLink,
   LucideIcon
 } from 'lucide-react';
 
@@ -59,120 +61,157 @@ export const SUB_NAV_ITEMS: Record<string, SubNavItem[]> = {
   ],
 };
 
-function getCleanPlaceAddress(rawAddress: string | null | undefined): string {
-  if (!rawAddress || !rawAddress.trim()) {
-    return 'Vendor Location';
-  }
-  const trimmed = rawAddress.trim();
-
-  // If the string contains a URL link (Google Maps link)
-  if (/https?:\/\/|[a-z0-9-]+\.(goo\.gl|google\.com)/i.test(trimmed)) {
-    // Strip URL out if combined with text address
-    const cleanText = trimmed
-      .replace(/https?:\/\/[^\s]+/gi, '')
-      .replace(/maps\.app\.goo\.gl[^\s]*/gi, '')
-      .replace(/goo\.gl\/maps[^\s]*/gi, '')
-      .trim();
-
-    if (cleanText.length > 0) {
-      return cleanText.replace(/^[\s,.-]+|[\s,.-]+$/g, '');
-    }
-
-    // If pure URL, parse query or path place name
-    try {
-      const urlObj = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
-      const queryParam = urlObj.searchParams.get('q') || urlObj.searchParams.get('query');
-      if (queryParam) {
-        return decodeURIComponent(queryParam);
-      }
-
-      const placeMatch = urlObj.pathname.match(/\/place\/([^\/]+)/);
-      if (placeMatch && placeMatch[1]) {
-        return decodeURIComponent(placeMatch[1]).replace(/\+/g, ' ');
-      }
-    } catch {
-      // fallback
-    }
-
-    return 'Google Maps Location';
-  }
-
-  return trimmed;
-}
-
 export const Header: React.FC = () => {
-  const [vendorName, setVendorName] = useState<string>('SNK DevWorks');
+  const [vendorName, setVendorName] = useState<string>('');
   const [vendorLocation, setVendorLocation] = useState<string>('');
+  const [rawLocation, setRawLocation] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [open, setOpen] = useState<boolean>(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         const name =
+          user.user_metadata?.shop_name ||
           user.user_metadata?.full_name ||
           user.user_metadata?.name ||
-          user.user_metadata?.shop_name ||
           user.email?.split('@')[0] ||
-          'SNK DevWorks';
-        const location =
+          '';
+        const raw =
           user.user_metadata?.location ||
           user.user_metadata?.address ||
           user.user_metadata?.shop_address ||
           '';
+
         setVendorName(name);
-        setVendorLocation(location);
+        setRawLocation(raw);
+
+        if (raw && /https?:\/\//i.test(raw)) {
+          try {
+            const res = await fetch(`/api/resolve-maps?url=${encodeURIComponent(raw)}`);
+            const data = await res.json();
+            setVendorLocation(data.address || raw);
+          } catch {
+            setVendorLocation(raw);
+          }
+        } else {
+          setVendorLocation(raw);
+        }
       }
       setLoading(false);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const name =
-          session.user.user_metadata?.full_name ||
-          session.user.user_metadata?.name ||
-          session.user.user_metadata?.shop_name ||
-          session.user.email?.split('@')[0] ||
-          'SNK DevWorks';
-        const location =
-          session.user.user_metadata?.location ||
-          session.user.user_metadata?.address ||
-          session.user.user_metadata?.shop_address ||
-          '';
-        setVendorName(name);
-        setVendorLocation(location);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const mapsUrl = rawLocation && /https?:\/\//i.test(rawLocation)
+    ? rawLocation
+    : vendorLocation
+      ? `https://maps.google.com/?q=${encodeURIComponent(vendorLocation)}`
+      : 'https://maps.google.com';
 
   return (
     <header className="sticky top-0 z-50 bg-[#fdf8f3] border-b border-gray-200">
       <div className="max-w-[1536px] mx-auto px-4 md:px-8 h-[86px] flex items-center justify-between">
 
-        {/* Left: Brand & Vendor Info */}
-        <div className="flex items-center gap-6 shrink-0 ml-4 lg:ml-12">
+        {/* Left: Logo + Address trigger */}
+        <div className="flex items-center gap-4 shrink-0 ml-4 lg:ml-12">
           <Link href="/vendor/dashboard" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/text-logo.png" alt="MyStreetMenu" className="h-11 w-auto object-contain" />
           </Link>
 
-          <Link href="/vendor/settings" className="hidden md:flex flex-col cursor-pointer border-r border-transparent pr-2 group">
-            <span className="text-[15px] font-bold text-[#1f114a] group-hover:text-[#f77512] transition-colors">
+          {/* Zepto-style address pill */}
+          <div className="relative hidden md:block" ref={popoverRef}>
+            <button
+              id="address-trigger"
+              onClick={() => setOpen((o) => !o)}
+              className="flex flex-col items-start cursor-pointer group focus:outline-none"
+            >
               {loading ? (
-                <span className="h-4 w-28 bg-gray-200 animate-pulse rounded inline-block" />
+                <>
+                  <span className="h-4 w-28 bg-gray-200 animate-pulse rounded mb-1 inline-block" />
+                  <span className="h-3 w-40 bg-gray-100 animate-pulse rounded inline-block" />
+                </>
               ) : (
-                vendorName
+                <>
+                  <span className="text-[15px] font-bold text-[#1f114a] group-hover:text-[#f77512] transition-colors leading-tight">
+                    {vendorName || 'Your Shop'}
+                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#f77512] shrink-0" strokeWidth={2.5} />
+                    <span className="text-[13px] font-semibold text-[#3d3d3d] max-w-[260px] truncate leading-tight">
+                      {vendorLocation || 'Set your location'}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 text-gray-500 transition-transform duration-200 ${
+                        open ? 'rotate-180 text-[#f77512]' : ''
+                      }`}
+                      strokeWidth={2.5}
+                    />
+                  </div>
+                </>
               )}
-            </span>
-            <div className="flex items-center text-[13px] mt-0.5">
-              <span className="truncate max-w-[220px] font-medium text-[#7a859e] group-hover:text-[#f77512] transition-colors">
-                {getCleanPlaceAddress(vendorLocation)}
-              </span>
-              <ChevronDown className="w-4 h-4 ml-1 flex-shrink-0 text-gray-500 group-hover:text-[#f77512] transition-colors" strokeWidth={2.5} />
-            </div>
-          </Link>
+            </button>
+
+            {/* Dropdown popup */}
+            {open && (
+              <div className="absolute left-0 top-[calc(100%+12px)] w-80 bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-gray-100 z-50 overflow-hidden">
+                {/* Header stripe */}
+                <div className="bg-[#fff7f0] px-5 py-3.5 border-b border-orange-100">
+                  <p className="text-[11px] font-semibold text-orange-400 uppercase tracking-widest mb-0.5">Shop Location</p>
+                  <p className="text-[15px] font-bold text-[#1f114a] leading-snug">{vendorName || 'Your Shop'}</p>
+                </div>
+
+                {/* Address block */}
+                <div className="px-5 py-4">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                      <MapPin className="w-4 h-4 text-[#f77512]" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-gray-800 leading-snug">
+                        {vendorLocation || 'Location not set'}
+                      </p>
+                      {vendorLocation && (
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[12px] text-[#f77512] font-semibold mt-1.5 hover:underline"
+                        >
+                          View on Google Maps
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer action */}
+                <div className="border-t border-gray-100 px-5 py-3">
+                  <Link
+                    href="/vendor/settings"
+                    onClick={() => setOpen(false)}
+                    className="text-[13px] font-semibold text-[#f77512] hover:underline"
+                  >
+                    Edit in Settings →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Center: Search Bar */}
@@ -189,7 +228,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Actions (Profile only) */}
+        {/* Right: Profile */}
         <div className="flex items-center gap-8 shrink-0 pr-2">
           <Link href="/vendor/settings" className="flex flex-col items-center justify-center gap-1 text-gray-800 hover:text-[#f77512] transition-colors">
             <User className="w-[24px] h-[24px]" strokeWidth={1.5} />
@@ -294,7 +333,7 @@ interface LayoutProps {
 }
 
 // Paths within /vendor that should NOT use the dashboard shell
-const AUTH_PATHS = ['/vendor/login', '/vendor/signup'];
+const AUTH_PATHS = ['/vendor/login', '/vendor/signup', '/vendor/onboarding'];
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();

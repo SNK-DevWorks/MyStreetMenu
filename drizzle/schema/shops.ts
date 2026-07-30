@@ -18,6 +18,7 @@ export const shops = pgTable('shops', {
   theme: text('theme'),
   menuVisibility: menuVisibilityEnum('menu_visibility').notNull().default('public'),
   isActive: boolean('is_active').notNull().default(true),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

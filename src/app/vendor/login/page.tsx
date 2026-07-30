@@ -59,7 +59,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   const [errorMsg, setErrorMsg] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const redirectTo = searchParams.get("next") || "/vendor/dashboard";
+  const redirectTo = searchParams.get("next") || "/vendor/onboarding";
 
   // Check initial session on mount: if user is already logged in, redirect to dashboard
   useEffect(() => {

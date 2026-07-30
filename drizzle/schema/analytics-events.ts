@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
 import { shops } from './shops';
+import { users } from './users';
 
 export const analyticsEventTypeEnum = pgEnum('analytics_event_type', [
   'menu_view',
@@ -16,7 +17,9 @@ export const analyticsEvents = pgTable('analytics_events', {
   sessionId: text('session_id'),
   eventType: analyticsEventTypeEnum('event_type').notNull(),
   metadata: jsonb('metadata'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
