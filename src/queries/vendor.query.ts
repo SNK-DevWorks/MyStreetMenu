@@ -13,6 +13,7 @@ export async function getAdminVendorList() {
     .select({
       userId: users.id,
       userName: users.name,
+      userEmail: users.email,
       userPhone: users.phone,
       userIsActive: users.isActive,
       userCreatedAt: users.createdAt,

@@ -13,6 +13,8 @@ export async function updateMenuAction(formData: FormData): Promise<ActionRespon
     description: (formData.get('description') as string) || undefined,
     price: (formData.get('price') as string) || undefined,
     imageUrl: (formData.get('imageUrl') as string) || undefined,
+    foodType: (formData.get('foodType') as string) || undefined,
+    categoryId: (formData.get('categoryId') as string) || undefined,
     isBestSeller: formData.has('isBestSeller') ? formData.get('isBestSeller') === 'true' : undefined,
     isSoldOut: formData.has('isSoldOut') ? formData.get('isSoldOut') === 'true' : undefined,
     isTodaysSpecial: formData.has('isTodaysSpecial') ? formData.get('isTodaysSpecial') === 'true' : undefined,
@@ -32,3 +34,4 @@ export async function updateMenuAction(formData: FormData): Promise<ActionRespon
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update menu item' };
   }
 }
+

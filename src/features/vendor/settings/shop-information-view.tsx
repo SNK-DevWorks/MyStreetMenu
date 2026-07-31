@@ -3,8 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, ImagePlus, MapPin, ExternalLink, Clipboard, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { updateShopAction } from '@/actions/shop/update-shop';
 
 export const ShopInformationView: React.FC = () => {
+  const [shopId, setShopId] = useState('');
   const [shopName, setShopName] = useState('');
   const [description, setDescription] = useState('');
   const [foodType, setFoodType] = useState('');
@@ -16,15 +19,26 @@ export const ShopInformationView: React.FC = () => {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setShopName(user.user_metadata?.shop_name || user.user_metadata?.full_name || '');
-        setDescription(user.user_metadata?.description || '');
-        setFoodType(user.user_metadata?.food_type || '');
-        setPhone(user.phone || user.user_metadata?.phone || '');
-        setWhatsapp(user.user_metadata?.whatsapp || '');
-        setAddress(user.user_metadata?.address || user.user_metadata?.location || '');
+    getVendorShopAction().then((res) => {
+      if (res.success && res.data) {
+        setShopId(res.data.id);
+        setShopName(res.data.name || '');
+        setFoodType(res.data.foodType || '');
+        setPhone(res.data.phone || '');
+        setWhatsapp(res.data.whatsapp || '');
+        setAddress(res.data.address || res.data.mapUrl || '');
+      } else {
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) {
+            setShopName(user.user_metadata?.shop_name || user.user_metadata?.full_name || '');
+            setDescription(user.user_metadata?.description || '');
+            setFoodType(user.user_metadata?.food_type || '');
+            setPhone(user.phone || user.user_metadata?.phone || '');
+            setWhatsapp(user.user_metadata?.whatsapp || '');
+            setAddress(user.user_metadata?.address || user.user_metadata?.location || '');
+          }
+        });
       }
     });
   }, []);
@@ -32,6 +46,21 @@ export const ShopInformationView: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (shopId) {
+        const fd = new FormData();
+        fd.append('id', shopId);
+        fd.append('name', shopName);
+        fd.append('foodType', foodType);
+        fd.append('phone', phone);
+        fd.append('whatsapp', whatsapp);
+        fd.append('address', address);
+
+        const res = await updateShopAction(fd);
+        if (res.success && res.data) {
+          setAddress(res.data.address || address);
+        }
+      }
+
       const supabase = createClient();
       await supabase.auth.updateUser({
         data: {
@@ -44,6 +73,7 @@ export const ShopInformationView: React.FC = () => {
           location: address,
         },
       });
+
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch {

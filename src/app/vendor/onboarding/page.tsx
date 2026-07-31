@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Check, ChevronLeft, ChevronRight, Loader2, MapPin, ExternalLink } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, MapPin, ExternalLink, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { completeOnboardingAction } from '@/actions/auth/complete-onboarding';
 
 export default function VendorOnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const totalSteps = 4;
 
   const [formData, setFormData] = useState({
@@ -24,17 +26,30 @@ export default function VendorOnboardingPage() {
   useEffect(() => {
     const getUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setFormData((prev) => ({
-          ...prev,
-          shopName: user.user_metadata?.shop_name || user.user_metadata?.name || '',
-          phone: user.user_metadata?.phone || '',
-          location: user.user_metadata?.location || user.user_metadata?.address || '',
-        }));
+      if (!user) {
+        router.replace('/vendor/login');
+        return;
       }
+
+      const isOnboarded = Boolean(
+        user.user_metadata?.onboarding_completed ||
+        (user.user_metadata?.shop_name && user.user_metadata?.phone)
+      );
+
+      if (isOnboarded) {
+        router.replace('/vendor/dashboard');
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        shopName: user.user_metadata?.shop_name || user.user_metadata?.name || '',
+        phone: user.user_metadata?.phone || '',
+        location: user.user_metadata?.location || user.user_metadata?.address || '',
+      }));
     };
     getUserData();
-  }, [supabase.auth]);
+  }, [supabase.auth, router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -53,29 +68,31 @@ export default function VendorOnboardingPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  // Simulates final submission and redirect to dashboard
+  // Submits all onboarding data to the server, creating DB rows for user + shop
   const finishOnboarding = async () => {
     setIsLoading(true);
+    setErrorMsg(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.auth.updateUser({
-          data: {
-            shop_name: formData.shopName || user.user_metadata?.shop_name,
-            category: formData.category,
-            phone: formData.phone,
-            whatsapp: formData.whatsapp,
-            location: formData.location,
-            address: formData.location,
-            onboarding_completed: true,
-          },
-        });
+      const result = await completeOnboardingAction({
+        shopName: formData.shopName,
+        category: formData.category,
+        phone: formData.phone,
+        whatsapp: formData.whatsapp,
+        location: formData.location,
+      });
+
+      if (!result.success) {
+        setErrorMsg(result.error ?? 'Something went wrong. Please try again.');
+        setIsLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('Error saving onboarding info:', err);
-    } finally {
-      setIsLoading(false);
+
+      // All DB writes succeeded — navigate to dashboard
       router.push('/vendor/dashboard');
+    } catch (err) {
+      console.error('Onboarding error:', err);
+      setErrorMsg('An unexpected error occurred. Please try again.');
+      setIsLoading(false);
     }
   };
 
@@ -340,12 +357,20 @@ export default function VendorOnboardingPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                  Loading Dashboard...
+                  Setting up your shop...
                 </>
               ) : (
                 'Go to Dashboard'
               )}
             </button>
+
+            {/* Error feedback */}
+            {errorMsg && (
+              <div className="mt-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm max-w-md mx-auto text-left">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
           </div>
         )}
       </div>

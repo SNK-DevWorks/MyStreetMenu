@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import { Heart, Eye, Trash2, Pencil, Flame, Calendar, Clock } from 'lucide-react';
-import allItemsData from '@/data/vendor/items.json';
 
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
 export interface FoodCardItem {
-  id: number;
+  id: string;
   title: string;
   description: string;
   price?: string;
@@ -57,9 +56,9 @@ const FoodTypeDot: React.FC<{ type?: 'veg' | 'non-veg' | 'egg' }> = ({ type = 'v
 interface CustomerProps { variant: 'customer'; activeTimeframe: TimeframeType; }
 interface VendorProps   {
   variant: 'vendor';
-  onDelete: (id: number, title: string) => void;
+  onDelete: (id: string, title: string) => void;
   onEdit?: (item: FoodCardItem) => void;
-  onToggleAvailability?: (id: number) => void;
+  onToggleAvailability?: (id: string) => void;
 }
 
 export type FoodCardProps = FoodCardItem & (CustomerProps | VendorProps);
@@ -212,10 +211,16 @@ const getPopularItems = (items: FoodCardItem[], timeframe: TimeframeType, limit 
     })
     .slice(0, limit);
 
-export const Item: React.FC = () => {
+interface ItemProps {
+  items?: FoodCardItem[];
+}
+
+export const Item: React.FC<ItemProps> = ({ items = [] }) => {
   const [activeTab, setActiveTab] = useState<TimeframeType>('today');
   const currentTabObj = TABS.find(t => t.id === activeTab) ?? TABS[0];
-  const popularItems = useMemo(() => getPopularItems(allItemsData as FoodCardItem[], activeTab, 4), [activeTab]);
+  const popularItems = getPopularItems(items, activeTab, 4);
+
+  if (items.length === 0) return null;
 
   return (
     <div className="w-full max-w-[1200px] mt-8 mb-8 flex flex-col gap-5">

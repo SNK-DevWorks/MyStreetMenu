@@ -10,7 +10,7 @@ export const authService = {
    * Create user profile after Supabase Auth signup.
    * The id must match the Supabase auth.users.id.
    */
-  async signup(data: { id: string; name: string; phone?: string }) {
+  async signup(data: { id: string; name: string; email?: string; phone?: string }) {
     const existing = await userRepository.findById(data.id);
     if (existing) {
       throw new Error('User profile already exists');
@@ -19,6 +19,7 @@ export const authService = {
     const user = await userRepository.create({
       id: data.id,
       name: data.name,
+      email: data.email,
       phone: data.phone,
       role: 'vendor',
     });

@@ -59,18 +59,30 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   const [errorMsg, setErrorMsg] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const redirectTo = searchParams.get("next") || "/vendor/onboarding";
+  // Helper to determine destination path based on vendor onboarding status
+  const getDestinationUrl = (user: any) => {
+    const nextParam = searchParams.get("next");
+    if (nextParam && nextParam !== "/vendor/onboarding") {
+      return nextParam;
+    }
+    const isOnboarded = Boolean(
+      user?.user_metadata?.onboarding_completed ||
+      (user?.user_metadata?.shop_name && user?.user_metadata?.phone)
+    );
+    return isOnboarded ? "/vendor/dashboard" : "/vendor/onboarding";
+  };
 
-  // Check initial session on mount: if user is already logged in, redirect to dashboard
+  // Check initial session on mount: if user is already logged in, redirect to destination
   useEffect(() => {
     const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.replace(redirectTo);
+      if (session?.user) {
+        const dest = getDestinationUrl(session.user);
+        router.replace(dest);
       }
     };
     checkInitialSession();
-  }, [supabase.auth, router, redirectTo]);
+  }, [supabase.auth, router, searchParams]);
 
   // Mode switch handler
   const handleToggleMode = () => {
@@ -88,8 +100,9 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
 
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.replace(redirectTo);
+      if (session?.user) {
+        const dest = getDestinationUrl(session.user);
+        router.replace(dest);
         router.refresh();
       }
     };
@@ -97,7 +110,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
     checkSession();
     const interval = setInterval(checkSession, 3000);
     return () => clearInterval(interval);
-  }, [showConfirmScreen, supabase.auth, router, redirectTo]);
+  }, [showConfirmScreen, supabase.auth, router, searchParams]);
 
   // Login / Signup Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +120,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
 
     if (isLogin) {
       // Login flow
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -118,13 +131,15 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         return;
       }
 
-      router.replace(redirectTo);
+      const dest = getDestinationUrl(authData?.user);
+      router.replace(dest);
       router.refresh();
     } else {
       // Signup flow
       const fullName = `${firstName} ${lastName}`.trim();
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const redirectUrl = `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+      const signupNext = searchParams.get("next") || "/vendor/onboarding";
+      const redirectUrl = `${origin}/auth/callback?next=${encodeURIComponent(signupNext)}`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -149,7 +164,8 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         return;
       }
 
-      router.replace(redirectTo);
+      const dest = getDestinationUrl(data.user);
+      router.replace(dest);
       router.refresh();
     }
   };
@@ -161,7 +177,8 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
     setIsLoading(true);
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const redirectUrl = `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+    const signupNext = searchParams.get("next") || "/vendor/onboarding";
+    const redirectUrl = `${origin}/auth/callback?next=${encodeURIComponent(signupNext)}`;
 
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -183,10 +200,13 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   // Google OAuth flow
   const handleGoogleAuth = async () => {
     setIsGoogleLoading(true);
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const nextParam = searchParams.get("next") || "";
+    const redirectUrl = `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ''}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+        redirectTo: redirectUrl,
       },
     });
     if (error) {

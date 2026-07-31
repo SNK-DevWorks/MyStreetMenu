@@ -24,3 +24,158 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 🍕 Pizza Slice Loading Animation */
+.pizza-loader-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.pizza-loader-wrapper .pizza-slice {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 35px solid #FEFCC6;
+  top: 0%;
+  left: 50%;
+  transform: translateX(-50%);
+  visibility: hidden;
+  z-index: 10;
+}
+
+.pizza-loader-wrapper .pizza-slice::before {
+  content: '';
+  position: absolute;
+  left: -15px;
+  top: -45px;
+  width: 30px;
+  height: 15px;
+  background: #FEFCC6;
+  border-radius: 100%;
+  border-top: 5px solid #E57A19;
+  z-index: -1;
+}
+
+.pizza-loader-wrapper .pizza-slice .tomato {
+  background: #A30000;
+  position: absolute;
+  border-radius: 100%;
+}
+
+.pizza-loader-wrapper .pizza-slice .tomato:nth-child(1) {
+  width: 10px;
+  height: 10px;
+  top: -37px;
+  left: 1px;
+}
+
+.pizza-loader-wrapper .pizza-slice .tomato:nth-child(2) {
+  width: 7px;
+  height: 7px;
+  top: -25px;
+  left: -7px;
+}
+
+.pizza-loader-wrapper .pizza-slice .olive {
+  background: #333333;
+  position: absolute;
+  border-radius: 100%;
+  width: 4px;
+  height: 4px;
+  top: -14px;
+  left: -1px;
+}
+
+/* Slices Keyframes 1..6 (Fast & Snappy Animation) */
+.pizza-loader-wrapper .pizza-slice:nth-child(1) {
+  animation: pizza-slide-in-1 0.5s infinite alternate ease-in-out;
+  animation-delay: 0.08s;
+}
+@keyframes pizza-slide-in-1 {
+  from {
+    transform: translateX(-50%) rotate(60deg) translateY(-30px);
+    visibility: visible;
+  }
+  to {
+    transform: translateX(-50%) rotate(60deg) translateY(-15px);
+    visibility: visible;
+  }
+}
+
+.pizza-loader-wrapper .pizza-slice:nth-child(2) {
+  animation: pizza-slide-in-2 0.5s infinite alternate ease-in-out;
+  animation-delay: 0.16s;
+}
+@keyframes pizza-slide-in-2 {
+  from {
+    transform: translateX(-50%) rotate(120deg) translateY(-30px);
+    visibility: visible;
+  }
+  to {
+    transform: translateX(-50%) rotate(120deg) translateY(-15px);
+    visibility: visible;
+  }
+}
+
+.pizza-loader-wrapper .pizza-slice:nth-child(3) {
+  animation: pizza-slide-in-3 0.5s infinite alternate ease-in-out;
+  animation-delay: 0.24s;
+}
+@keyframes pizza-slide-in-3 {
+  from {
+    transform: translateX(-50%) rotate(180deg) translateY(-30px);
+    visibility: visible;
+  }
+  to {
+    transform: translateX(-50%) rotate(180deg) translateY(-15px);
+    visibility: visible;
+  }
+}
+
+.pizza-loader-wrapper .pizza-slice:nth-child(4) {
+  animation: pizza-slide-in-4 0.5s infinite alternate ease-in-out;
+  animation-delay: 0.32s;
+}
+@keyframes pizza-slide-in-4 {
+  from {
+    transform: translateX(-50%) rotate(240deg) translateY(-30px);
+    visibility: visible;
+  }
+  to {
+    transform: translateX(-50%) rotate(240deg) translateY(-15px);
+    visibility: visible;
+  }
+}
+
+.pizza-loader-wrapper .pizza-slice:nth-child(5) {
+  animation: pizza-slide-in-5 0.5s infinite alternate ease-in-out;
+  animation-delay: 0.40s;
+}
+@keyframes pizza-slide-in-5 {
+  from {
+    transform: translateX(-50%) rotate(300deg) translateY(-30px);
+    visibility: visible;
+  }
+  to {
+    transform: translateX(-50%) rotate(300deg) translateY(-15px);
+    visibility: visible;
+  }
+}
+
+.pizza-loader-wrapper .pizza-slice:nth-child(6) {
+  animation: pizza-slide-in-6 0.5s infinite alternate ease-in-out;
+  animation-delay: 0.48s;
+}
+@keyframes pizza-slide-in-6 {
+  from {
+    transform: translateX(-50%) rotate(360deg) translateY(-30px);
+    visibility: visible;
+  }
+  to {
+    transform: translateX(-50%) rotate(360deg) translateY(-15px);
+    visibility: visible;
+  }
+}

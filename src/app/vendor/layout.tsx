@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MenuLoading from '@/app/vendor/menu/loading';
 import { createClient } from '@/lib/supabase/client';
+import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
 
 import {
   Search,
@@ -70,37 +71,34 @@ export const Header: React.FC = () => {
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user) {
-        const name =
-          user.user_metadata?.shop_name ||
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email?.split('@')[0] ||
-          '';
-        const raw =
-          user.user_metadata?.location ||
-          user.user_metadata?.address ||
-          user.user_metadata?.shop_address ||
-          '';
+    getVendorShopAction().then(async (res) => {
+      if (res.success && res.data) {
+        setVendorName(res.data.name || '');
+        setVendorLocation(res.data.address || '');
+        setRawLocation(res.data.mapUrl || res.data.address || '');
+        setLoading(false);
+      } else {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const name =
+            user.user_metadata?.shop_name ||
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.email?.split('@')[0] ||
+            '';
+          const raw =
+            user.user_metadata?.address ||
+            user.user_metadata?.location ||
+            user.user_metadata?.shop_address ||
+            '';
 
-        setVendorName(name);
-        setRawLocation(raw);
-
-        if (raw && /https?:\/\//i.test(raw)) {
-          try {
-            const res = await fetch(`/api/resolve-maps?url=${encodeURIComponent(raw)}`);
-            const data = await res.json();
-            setVendorLocation(data.address || raw);
-          } catch {
-            setVendorLocation(raw);
-          }
-        } else {
-          setVendorLocation(raw);
+          setVendorName(name);
+          setRawLocation(raw);
+          setVendorLocation(user.user_metadata?.address || raw);
         }
+        setLoading(false);
       }
-      setLoading(false);
     });
   }, []);
 

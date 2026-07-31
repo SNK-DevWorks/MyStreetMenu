@@ -5,6 +5,7 @@ export const userRoleEnum = pgEnum('user_role', ['vendor', 'admin']);
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(), // Matches auth.users.id from Supabase
   name: text('name').notNull(),
+  email: text('email'),
   phone: text('phone'),
   role: userRoleEnum('role').notNull().default('vendor'),
   isActive: boolean('is_active').notNull().default(true),

@@ -14,6 +14,7 @@ export async function createMenuAction(formData: FormData): Promise<ActionRespon
     description: (formData.get('description') as string) || undefined,
     price: formData.get('price') as string,
     imageUrl: (formData.get('imageUrl') as string) || undefined,
+    foodType: (formData.get('foodType') as string) || 'veg',
     isBestSeller: formData.get('isBestSeller') === 'true',
     isSoldOut: formData.get('isSoldOut') === 'true',
     isTodaysSpecial: formData.get('isTodaysSpecial') === 'true',
@@ -35,3 +36,4 @@ export async function createMenuAction(formData: FormData): Promise<ActionRespon
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create menu item' };
   }
 }
+

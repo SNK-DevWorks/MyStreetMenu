@@ -3,10 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Star, Flame, Clock, Utensils } from 'lucide-react';
 import { FoodCard, type FoodCardItem, type TimeframeType } from '@/components/shared/item';
-import allItemsData from '@/data/vendor/items.json';
-
-const items = allItemsData as FoodCardItem[];
-const CATEGORIES = ['All', ...Array.from(new Set(items.map(i => i.category).filter(Boolean))) as string[]];
+// Public menu items will be loaded from DB — placeholder until wired
+const items: FoodCardItem[] = [];
+const CATEGORIES = ['All'];
 
 interface PublicMenuViewProps {
   vendorName?: string;

@@ -12,6 +12,7 @@ export const menuItems = pgTable('menu_items', {
   description: text('description'),
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   imageUrl: text('image_url'),
+  foodType: text('food_type').notNull().default('veg'),  // 'veg' | 'non-veg' | 'egg'
   isBestSeller: boolean('is_best_seller').notNull().default(false),
   isSoldOut: boolean('is_sold_out').notNull().default(false),
   isTodaysSpecial: boolean('is_todays_special').notNull().default(false),
@@ -23,3 +24,5 @@ export const menuItems = pgTable('menu_items', {
 
 export type MenuItem = typeof menuItems.$inferSelect;
 export type NewMenuItem = typeof menuItems.$inferInsert;
+export type FoodType = 'veg' | 'non-veg' | 'egg';
+

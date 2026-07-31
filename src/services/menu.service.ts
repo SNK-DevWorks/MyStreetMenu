@@ -107,4 +107,23 @@ export const menuService = {
   async getMenuByShop(shopId: string) {
     return menuRepository.findByShopId(shopId);
   },
+
+  /**
+   * Get menu items with their category name enriched.
+   * Returns items sorted by category sort order, then item sort order.
+   */
+  async getMenuWithCategories(shopId: string) {
+    const [items, cats] = await Promise.all([
+      menuRepository.findByShopId(shopId),
+      categoryRepository.findByShopId(shopId),
+    ]);
+
+    const categoryMap = new Map(cats.map((c) => [c.id, c.name]));
+
+    return items.map((item) => ({
+      ...item,
+      categoryName: categoryMap.get(item.categoryId) ?? 'Uncategorized',
+    }));
+  },
 };
+

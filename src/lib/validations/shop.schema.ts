@@ -6,6 +6,7 @@ export const createShopSchema = z.object({
   phone: z.string().optional(),
   whatsapp: z.string().optional(),
   address: z.string().optional(),
+  mapUrl: z.string().optional(),
   logoUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
   coverImage: z.string().url('Invalid URL').optional().or(z.literal('')),
   openingHours: z.record(z.string(), z.string()).optional(),

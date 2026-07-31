@@ -1,305 +1,151 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
+import { Play, Sparkles, ArrowRight, ChevronRight, Star } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="home-root">
-      {/* Animated background blobs */}
-      <div className="blob blob-1" />
-      <div className="blob blob-2" />
-      <div className="blob blob-3" />
-
-      <main className="home-main">
-        {/* Logo / Brand */}
-        <div className="brand">
-          <div className="brand-icon">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="12" fill="url(#brandGrad)" />
-              <path
-                d="M10 14h20M10 20h20M10 26h12"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <defs>
-                <linearGradient id="brandGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#f97316" />
-                  <stop offset="1" stopColor="#ec4899" />
-                </linearGradient>
-              </defs>
-            </svg>
+    <div className="min-h-screen w-screen bg-[#fafafa] font-sans overflow-x-hidden flex flex-col justify-between">
+      {/* Header Navigation */}
+      <header className="shrink-0">
+        <nav className="flex items-center justify-between px-8 sm:px-12 lg:px-16 py-5 max-w-[1440px] mx-auto w-full">
+          <div className="flex items-center">
+            <img
+              src="https://res.cloudinary.com/dfledgwk1/image/upload/v1785408263/text-logo_wnsoav.png"
+              alt="MyStreetMenu"
+              className="h-9 w-auto object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <span className="brand-name">MyStreetMenu</span>
-        </div>
 
-        {/* Hero Text */}
-        <div className="hero-text">
-          <h1 className="hero-title">
-            Welcome to <span className="gradient-text">MyStreetMenu</span>
+          <div className="hidden md:flex items-center gap-10 text-sm font-medium text-gray-600">
+            <a href="#features" className="hover:text-gray-900 transition-colors">
+              Features
+            </a>
+            <a href="#demo" className="hover:text-gray-900 transition-colors">
+              Demo
+            </a>
+            <a href="#pricing" className="hover:text-gray-900 transition-colors">
+              Pricing
+            </a>
+            <a href="#faq" className="hover:text-gray-900 transition-colors">
+              FAQ
+            </a>
+          </div>
+
+          <div className="flex items-center gap-6 text-sm font-medium">
+            <Link
+              href="/vendor/login"
+              className="text-gray-600 hover:text-gray-900 transition-colors hidden sm:block font-medium"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/vendor/signup"
+              className="bg-[#ff6b2b] text-white px-5 py-2.5 rounded-lg hover:bg-[#e85a1f] transition-colors shadow-sm cursor-pointer inline-flex items-center justify-center font-medium"
+            >
+              Start Free Trial
+            </Link>
+          </div>
+        </nav>
+
+        <div className="bg-[#f5f5f7] py-2.5 text-center text-sm text-[#1d1d1f] w-full border-y border-gray-200">
+          Introducing MyStreetMenu — Free for Your First 30 Days.{" "}
+          <Link
+            href="/vendor/signup"
+            className="text-[#ff6b2b] hover:underline inline-flex items-center gap-0.5 group font-medium"
+          >
+            Claim{" "}
+            <ChevronRight
+              size={14}
+              className="group-hover:translate-x-0.5 transition-transform mt-0.5"
+            />
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Hero Content */}
+      <main className="max-w-[1440px] mx-auto px-8 sm:px-12 lg:px-16 py-6 lg:py-10 grid lg:grid-cols-[1fr_1.15fr] gap-12 lg:gap-16 xl:gap-24 items-center relative flex-1 w-full min-h-0">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#fff5f0] rounded-full blur-3xl -z-10 opacity-70 pointer-events-none"></div>
+        <Sparkles className="absolute top-12 left-[45%] text-[#ff6b2b] opacity-40 w-5 h-5 -z-10" />
+        <Sparkles className="absolute bottom-20 left-[40%] text-[#ff6b2b] opacity-40 w-4 h-4 -z-10" />
+
+        <div className="flex flex-col gap-5 lg:gap-6 relative z-10 justify-center">
+          {/* Headline */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-[1.2] tracking-tight">
+            Everything Your Food Business Needs,
+            <br className="hidden sm:inline" />{" "}
+            <span className="text-[#ff6b2b]">One Smart Menu Away.</span>
           </h1>
-          <p className="hero-sub">
-            Your digital menu platform — choose your portal to get started
+
+          {/* Subheadline */}
+          <p className="text-base sm:text-lg text-gray-600 max-w-xl leading-relaxed">
+            Create a beautiful QR menu, update your menu anytime, promote today's
+            specials, and track customer insights—all from one simple dashboard.
           </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-5 mt-2">
+            <Link
+              href="/vendor/signup"
+              className="w-full sm:w-auto bg-[#ff6b2b] text-white px-7 py-3.5 rounded-xl font-semibold text-base sm:text-lg hover:bg-[#e85a1f] transition-all shadow-[0_8px_20px_-6px_rgba(255,107,43,0.5)] flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              Start Free Trial
+              <ArrowRight
+                size={20}
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </Link>
+            <Link
+              href="/vendor/login"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 text-gray-700 font-medium hover:text-gray-900 transition-colors group cursor-pointer"
+            >
+              <div className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center group-hover:shadow-lg transition-shadow border border-gray-100 text-[#ff6b2b]">
+                <Play size={18} className="fill-current ml-1" />
+              </div>
+              See how it works
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2 mt-2 lg:mt-4 pt-4 lg:pt-6 border-t border-gray-100 text-sm font-medium text-gray-500">
+            <Star size={16} className="text-[#ff6b2b] fill-[#ff6b2b] shrink-0" />
+            <span>Trusted by restaurants, cafés & food vendors</span>
+          </div>
         </div>
 
-        {/* Portal Cards */}
-        <div className="portal-grid">
-          {/* Vendor Card */}
-          <Link href="/vendor/login" className="portal-card vendor-card">
-            <div className="card-glow vendor-glow" />
-            <div className="card-icon vendor-icon">
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                <circle cx="24" cy="24" r="24" fill="rgba(249,115,22,0.15)" />
-                <path d="M14 20h20l-2 12H16L14 20Z" stroke="#f97316" strokeWidth="2" strokeLinejoin="round" />
-                <path d="M10 20h28" stroke="#f97316" strokeWidth="2" strokeLinecap="round" />
-                <path d="M17 20l2-6h10l2 6" stroke="#f97316" strokeWidth="2" strokeLinejoin="round" />
-                <circle cx="19" cy="35" r="1.5" fill="#f97316" />
-                <circle cx="29" cy="35" r="1.5" fill="#f97316" />
-              </svg>
-            </div>
-            <h2 className="card-title">Vendor Portal</h2>
-            <p className="card-desc">
-              Manage your menu, orders, promotions and QR codes for your street food stall or restaurant
-            </p>
-            <div className="card-btn vendor-btn">
-              <span>Login as Vendor</span>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M4 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </Link>
+        <div className="relative z-10 w-full h-[450px] sm:h-[550px] lg:h-[650px] xl:h-[700px] flex items-center justify-center lg:justify-end mt-4 lg:mt-0">
+          {/* Abstract orange background circle for the image */}
+          <div className="absolute -right-8 lg:-right-12 top-1/2 -translate-y-1/2 w-[420px] h-[420px] md:w-[520px] md:h-[520px] lg:w-[620px] lg:h-[620px] xl:w-[680px] xl:h-[680px] bg-gradient-to-tr from-[#ffe5d9] to-[#fff5f0] rounded-full -z-10 hidden lg:block"></div>
 
-          {/* Admin Card */}
-          <Link href="/admin/login" className="portal-card admin-card">
-            <div className="card-glow admin-glow" />
-            <div className="card-icon admin-icon">
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                <circle cx="24" cy="24" r="24" fill="rgba(139,92,246,0.15)" />
-                <path d="M24 14a4 4 0 100 8 4 4 0 000-8Z" stroke="#8b5cf6" strokeWidth="2" />
-                <path d="M14 34c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" />
-                <circle cx="33" cy="18" r="3" fill="rgba(139,92,246,0.3)" stroke="#8b5cf6" strokeWidth="1.5" />
-                <path d="M33 15v6M30 18h6" stroke="#8b5cf6" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <h2 className="card-title">Admin Portal</h2>
-            <p className="card-desc">
-              Oversee all vendors, manage subscriptions, view analytics and control platform settings
-            </p>
-            <div className="card-btn admin-btn">
-              <span>Login as Admin</span>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M4 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </Link>
+          <img
+            src="https://res.cloudinary.com/dfledgwk1/image/upload/v1785408237/Untitled_-_30_July_2026_at_11.16.23_anvkkz.png"
+            alt="MyStreetMenu App Presentation"
+            className="w-full max-w-[850px] lg:max-w-none lg:w-[125%] max-h-full h-auto object-contain drop-shadow-2xl translate-x-0 lg:translate-x-16 xl:translate-x-24 lg:scale-110 transition-transform duration-300"
+            referrerPolicy="no-referrer"
+          />
         </div>
-
-        <p className="footer-note">© 2026 MyStreetMenu · Built for street food vendors</p>
       </main>
 
-      <style>{`
-        .home-root {
-          min-height: 100vh;
-          background: #0d0d14;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          overflow: hidden;
-          font-family: 'Geist Sans', 'Inter', sans-serif;
-        }
-
-        /* Animated blobs */
-        .blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.35;
-          animation: blobFloat 8s ease-in-out infinite;
-        }
-        .blob-1 {
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, #f97316, #ec4899);
-          top: -150px; left: -100px;
-          animation-delay: 0s;
-        }
-        .blob-2 {
-          width: 400px; height: 400px;
-          background: radial-gradient(circle, #8b5cf6, #06b6d4);
-          bottom: -120px; right: -80px;
-          animation-delay: -3s;
-        }
-        .blob-3 {
-          width: 300px; height: 300px;
-          background: radial-gradient(circle, #10b981, #3b82f6);
-          top: 50%; left: 55%;
-          animation-delay: -6s;
-        }
-        @keyframes blobFloat {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -30px) scale(1.05); }
-          66% { transform: translate(-20px, 20px) scale(0.95); }
-        }
-
-        /* Main */
-        .home-main {
-          position: relative;
-          z-index: 10;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 40px;
-          padding: 40px 20px;
-          max-width: 900px;
-          width: 100%;
-        }
-
-        /* Brand */
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .brand-name {
-          font-size: 1.4rem;
-          font-weight: 700;
-          color: white;
-          letter-spacing: -0.02em;
-        }
-
-        /* Hero */
-        .hero-text {
-          text-align: center;
-        }
-        .hero-title {
-          font-size: clamp(2rem, 5vw, 3.2rem);
-          font-weight: 800;
-          color: white;
-          letter-spacing: -0.03em;
-          margin: 0 0 12px;
-          line-height: 1.15;
-        }
-        .gradient-text {
-          background: linear-gradient(135deg, #f97316, #ec4899, #8b5cf6);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .hero-sub {
-          font-size: 1.1rem;
-          color: rgba(255,255,255,0.55);
-          margin: 0;
-        }
-
-        /* Portal Grid */
-        .portal-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 24px;
-          width: 100%;
-        }
-
-        /* Cards */
-        .portal-card {
-          position: relative;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 24px;
-          padding: 36px 32px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          text-decoration: none;
-          overflow: hidden;
-          transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-          backdrop-filter: blur(12px);
-        }
-        .portal-card:hover {
-          transform: translateY(-6px);
-        }
-        .vendor-card:hover {
-          border-color: rgba(249,115,22,0.4);
-          box-shadow: 0 20px 60px rgba(249,115,22,0.15);
-        }
-        .admin-card:hover {
-          border-color: rgba(139,92,246,0.4);
-          box-shadow: 0 20px 60px rgba(139,92,246,0.15);
-        }
-
-        /* Glow effect */
-        .card-glow {
-          position: absolute;
-          width: 200px; height: 200px;
-          border-radius: 50%;
-          top: -80px; right: -60px;
-          filter: blur(50px);
-          opacity: 0;
-          transition: opacity 0.4s ease;
-        }
-        .portal-card:hover .card-glow { opacity: 0.3; }
-        .vendor-glow { background: #f97316; }
-        .admin-glow { background: #8b5cf6; }
-
-        .card-icon { width: 48px; height: 48px; }
-
-        .card-title {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: white;
-          margin: 0;
-          letter-spacing: -0.02em;
-        }
-
-        .card-desc {
-          font-size: 0.95rem;
-          color: rgba(255,255,255,0.5);
-          line-height: 1.6;
-          margin: 0;
-          flex: 1;
-        }
-
-        /* Buttons */
-        .card-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 14px 20px;
-          border-radius: 12px;
-          font-size: 0.95rem;
-          font-weight: 600;
-          width: fit-content;
-          transition: gap 0.2s ease, filter 0.2s ease;
-          margin-top: 8px;
-        }
-        .portal-card:hover .card-btn { gap: 12px; }
-
-        .vendor-btn {
-          background: linear-gradient(135deg, #f97316, #ea580c);
-          color: white;
-          box-shadow: 0 4px 20px rgba(249,115,22,0.35);
-        }
-        .vendor-btn:hover { filter: brightness(1.1); }
-
-        .admin-btn {
-          background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-          color: white;
-          box-shadow: 0 4px 20px rgba(139,92,246,0.35);
-        }
-        .admin-btn:hover { filter: brightness(1.1); }
-
-        /* Footer */
-        .footer-note {
-          font-size: 0.8rem;
-          color: rgba(255,255,255,0.25);
-          margin: 0;
-        }
-
-        @media (max-width: 640px) {
-          .portal-grid { grid-template-columns: 1fr; }
-          .portal-card { padding: 28px 24px; }
-        }
-      `}</style>
+      {/* Text-only Bottom Footer */}
+      <footer className="shrink-0 py-4 px-8 sm:px-12 lg:px-16 border-t border-gray-200/80 bg-[#fafafa] z-20">
+        <div className="max-w-[1440px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-gray-500">
+          <div>© 2026 MyStreetMenu. All rights reserved.</div>
+          <div>
+            Copyright by{" "}
+            <a
+              href="https://snkdevworks.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#ff6b2b] hover:underline"
+            >
+              snkdevworks.com
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
+
+

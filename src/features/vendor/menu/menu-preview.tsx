@@ -3,11 +3,10 @@
 import React, { useState, useMemo } from 'react';
 import { Eye, MonitorSmartphone, Smartphone, Monitor, Search, X, Star, Flame, Clock } from 'lucide-react';
 import { FoodCard, type FoodCardItem, type TimeframeType } from '@/components/shared/item';
-import allItemsData from '@/data/vendor/items.json';
+// Menu preview will load from DB in a future phase
+const items: FoodCardItem[] = [];
 
-const items = allItemsData as FoodCardItem[];
-
-const CATEGORIES = ['All', ...Array.from(new Set(items.map(i => i.category).filter(Boolean))) as string[]];
+const CATEGORIES = ['All'];
 
 type ViewMode = 'desktop' | 'mobile';
 

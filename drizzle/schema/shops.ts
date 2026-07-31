@@ -14,6 +14,7 @@ export const shops = pgTable('shops', {
   phone: text('phone'),
   whatsapp: text('whatsapp'),
   address: text('address'),
+  mapUrl: text('map_url'),
   openingHours: jsonb('opening_hours'), // { mon: "9:00-22:00", tue: "9:00-22:00", ... }
   theme: text('theme'),
   menuVisibility: menuVisibilityEnum('menu_visibility').notNull().default('public'),

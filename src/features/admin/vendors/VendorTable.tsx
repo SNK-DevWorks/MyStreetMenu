@@ -8,6 +8,7 @@ export interface Vendor {
   logoEmoji: string;
   shopName: string;
   owner: string;
+  email?: string;
   phone: string;
   location: string;
   status: 'Active' | 'Inactive' | string;
@@ -111,8 +112,13 @@ export function VendorTable({ vendors = defaultVendors, onAction }: VendorTableP
                 </div>
               </td>
 
-              {/* Owner */}
-              <td className="py-3.5 px-4 text-gray-800">{vendor.owner}</td>
+              {/* Owner & Email */}
+              <td className="py-3.5 px-4 text-gray-800">
+                <div className="font-semibold">{vendor.owner}</div>
+                {vendor.email && (
+                  <div className="text-[11px] text-gray-400 font-normal">{vendor.email}</div>
+                )}
+              </td>
 
               {/* Phone */}
               <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">{vendor.phone}</td>

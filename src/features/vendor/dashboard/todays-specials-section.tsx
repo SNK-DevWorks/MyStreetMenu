@@ -3,21 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Search, X, Check, Utensils, Plus, Flame } from 'lucide-react';
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
-import initialItemsData from '@/data/vendor/items.json';
+// Today's specials will be powered by real DB data in a future update
 
 export const TodaysSpecialsSection: React.FC = () => {
-  const [items] = useState<FoodCardItem[]>(initialItemsData as FoodCardItem[]);
+  const [items] = useState<FoodCardItem[]>([]);
 
   // Track IDs of items selected as Today's Specials
-  const [specialItemIds, setSpecialItemIds] = useState<number[]>(() => {
-    return (initialItemsData as FoodCardItem[])
-      .filter(item => item.isTodaysSpecial)
-      .map(item => item.id);
-  });
+  const [specialItemIds, setSpecialItemIds] = useState<string[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tempSelectedIds, setTempSelectedIds] = useState<number[]>([]);
+  const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showToast, setShowToast] = useState(false);
@@ -43,7 +39,7 @@ export const TodaysSpecialsSection: React.FC = () => {
   };
 
   // Toggle selection inside modal
-  const handleToggleItem = (id: number) => {
+  const handleToggleItem = (id: string) => {
     setTempSelectedIds(prev =>
       prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
     );
@@ -99,9 +95,6 @@ export const TodaysSpecialsSection: React.FC = () => {
             <h2 className="text-white text-xl sm:text-2xl md:text-3xl font-black tracking-wide drop-shadow-sm mt-1">
               Update Today's Special
             </h2>
-            <p className="text-white/90 text-xs sm:text-sm md:text-base font-medium">
-              Click to select multiple items from your menu to feature today
-            </p>
           </div>
 
           {/* Right Plus Button */}
@@ -128,9 +121,6 @@ export const TodaysSpecialsSection: React.FC = () => {
                   {currentSpecials.length} Active
                 </span>
               </h2>
-              <p className="text-slate-500 font-semibold text-xs sm:text-sm">
-                Featured daily items currently shown to your customers
-              </p>
             </div>
           </div>
 
@@ -147,10 +137,7 @@ export const TodaysSpecialsSection: React.FC = () => {
         {currentSpecials.length === 0 ? (
           <div className="bg-white rounded-3xl p-10 text-center border border-gray-200/80 flex flex-col items-center justify-center min-h-[200px]">
             <Utensils size={40} className="text-gray-300 mb-2" />
-            <h3 className="text-base font-bold text-slate-800 mb-1">No Specials Selected</h3>
-            <p className="text-gray-500 text-xs max-w-sm mb-4">
-              You haven't selected any items for Today's Specials yet. Click below to add menu items!
-            </p>
+            <h3 className="text-base font-bold text-slate-800 mb-4">No Specials Selected</h3>
             <button
               type="button"
               onClick={handleOpenModal}

@@ -1,3 +1,5 @@
-﻿export default function Page() {
-  return <div>DEFAULT</div>
+import { redirect } from 'next/navigation';
+
+export default function LoginPage() {
+  redirect('/vendor/login');
 }
