@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Share2, Download } from 'lucide-react';
+import { Share2, Download, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export const BURGER_TEMPLATE_URL =
@@ -216,16 +216,12 @@ export async function renderBurgerCardToCanvas(opts: {
   ctx.fillText('M', cx, cy + 0.5);
   ctx.textBaseline = 'alphabetic';
 
-  // --- Vendor Info at Bottom (Enlarged) ---
-  const infoY = bY + bH + 42;
+  // --- Vendor Info at Bottom ---
+  const infoY = bY + bH + 46;
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 26px Inter, system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(vendorName, W / 2, infoY);
-
-  ctx.fillStyle = '#64748b';
-  ctx.font = '600 15px Inter, system-ui, sans-serif';
-  ctx.fillText(vendorAddress, W / 2, infoY + 28);
 
   return canvas;
 }
@@ -283,12 +279,13 @@ export default function BurgerCardTemplate({
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [shared, setShared] = useState(false);
+  const [templateImgLoaded, setTemplateImgLoaded] = useState(false);
 
   // Preload Cloudinary template image & text logo
   useEffect(() => {
     loadImage(BURGER_TEMPLATE_URL)
-      .then((img) => setTemplateImg(img))
-      .catch(() => console.warn('Failed to load burger QR template image'));
+      .then((img) => { setTemplateImg(img); setTemplateImgLoaded(true); })
+      .catch(() => { console.warn('Failed to load burger QR template image'); setTemplateImgLoaded(true); });
 
     loadImage('/text-logo.png')
       .then((img) => setLogoImg(img))
@@ -333,6 +330,32 @@ export default function BurgerCardTemplate({
       setDownloading(false);
     }
   }, [vendorName, vendorAddress, qrModules, accentColor, templateImg, logoImg]);
+
+  const handleDownloadQrOnly = useCallback(async () => {
+    try {
+      const size = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+
+      await QRCode.toCanvas(canvas, publicMenuUrl || 'https://mystreetmenu.com', {
+        width: size,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff',
+        },
+        errorCorrectionLevel: 'H',
+      });
+
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `${vendorName ? vendorName.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'vendor'}-qr-code.png`;
+      a.click();
+    } catch (err) {
+      console.error('Failed to download QR code image:', err);
+    }
+  }, [publicMenuUrl, vendorName]);
 
   const handleShare = useCallback(async () => {
     if (navigator.share) {
@@ -388,14 +411,18 @@ export default function BurgerCardTemplate({
         <div className="flex flex-col items-center px-6 pt-5 pb-7 gap-5">
 
           {/* Burger QR Graphic with rounded corners */}
-          <div className="relative w-[335px] h-[425px] rounded-[24px] overflow-hidden flex items-center justify-center">
+          <div className="relative w-[335px] h-[425px] rounded-[24px] overflow-hidden flex items-center justify-center bg-white">
+            {/* Skeleton shimmer while image loads */}
+            {!templateImgLoaded && (
+              <div className="absolute inset-0 bg-gray-100 animate-pulse rounded-[24px]" />
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={BURGER_TEMPLATE_URL}
               alt="Burger QR Template"
-              className="w-full h-full object-contain pointer-events-none drop-shadow-md"
+              className={`w-full h-full object-contain pointer-events-none drop-shadow-md transition-opacity duration-300 ${templateImgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setTemplateImgLoaded(true)}
             />
-
             {/* Dynamic Custom Stylish QR Code Overlay */}
             <div
               className="absolute bg-white flex items-center justify-center p-1.5 rounded-xl shadow-2xs"
@@ -491,28 +518,37 @@ export default function BurgerCardTemplate({
             </div>
           </div>
 
-          {/* Vendor Name & Address */}
-          <div className="flex flex-col items-center gap-1 text-center -mt-2">
+          {/* Vendor Name */}
+          <div className="flex flex-col items-center justify-center text-center -mt-2">
             <p className="text-[24px] font-black text-slate-900 tracking-tight">{vendorName}</p>
-            <p className="text-[14px] text-slate-500 font-semibold">{vendorAddress}</p>
           </div>
 
         </div>
       </div>
 
       {/* Action Buttons Below Card */}
-      <div className="flex gap-4 w-full max-w-[380px] mt-6">
+      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-[380px] mt-6">
         <button
           id="qr-share"
           type="button"
           onClick={handleShare}
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl border-2 font-extrabold text-sm transition-all active:scale-95 cursor-pointer shadow-xs bg-white"
-          style={{ borderColor: accentColor, color: accentColor }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#fff7ed')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
+          style={{ borderColor: '#e2e8f0' }}
         >
-          <Share2 className="w-4 h-4" strokeWidth={2.5} />
+          <Share2 className="w-3.5 h-3.5 text-slate-500" strokeWidth={2} />
           {shared ? 'Copied!' : 'Share'}
+        </button>
+
+        <button
+          id="qr-download-only"
+          type="button"
+          onClick={handleDownloadQrOnly}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
+          style={{ borderColor: '#e2e8f0' }}
+          title="Download standalone high-resolution QR image"
+        >
+          <QrCode className="w-3.5 h-3.5 text-slate-600" strokeWidth={2} />
+          Download QR
         </button>
 
         <button
@@ -520,12 +556,12 @@ export default function BurgerCardTemplate({
           type="button"
           onClick={handleDownload}
           disabled={downloading}
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl font-extrabold text-sm text-white transition-all active:scale-95 cursor-pointer disabled:opacity-70 shadow-md hover:shadow-lg"
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl font-extrabold text-xs text-white transition-all active:scale-95 cursor-pointer disabled:opacity-70 shadow-md hover:shadow-lg shrink-0"
           style={{
             background: `linear-gradient(135deg, ${accentColor}, #c95e00)`,
           }}
         >
-          <Download className="w-4 h-4" strokeWidth={2.5} />
+          <Download className="w-3.5 h-3.5" strokeWidth={2.5} />
           {downloading ? 'Saving…' : 'Download Card'}
         </button>
       </div>

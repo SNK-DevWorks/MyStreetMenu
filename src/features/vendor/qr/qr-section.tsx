@@ -1,62 +1,84 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import BurgerCardTemplate from '@/features/vendor/qr/card-template/burger-card-template';
 import BurgerPosterTemplate from '@/features/vendor/qr/poster/custom-poster';
+import QrLoading from '@/app/vendor/qr/loading';
+import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { createClient } from '@/lib/supabase/client';
 
 function QrContent() {
-    const searchParams = useSearchParams();
-    const tab = searchParams.get('tab');
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const tab = searchParams.get('tab');
 
-    const [publicMenuUrl, setPublicMenuUrl] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return `${window.location.origin}/menu/my-street-menu-demo`;
+  const [publicMenuUrl, setPublicMenuUrl] = useState('');
+  const [vendorName, setVendorName] = useState('Your Shop');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setPublicMenuUrl(`${window.location.origin}/menu/my-street-menu-demo`);
+
+    getVendorShopAction().then(async (res) => {
+      if (res.success && res.data?.name) {
+        setVendorName(res.data.name);
+      } else {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const name =
+            user.user_metadata?.shop_name ||
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            'Your Shop';
+          setVendorName(name);
         }
-        return 'http://localhost:3000/menu/my-street-menu-demo';
+      }
+      setIsMounted(true);
     });
+  }, []);
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setPublicMenuUrl(`${window.location.origin}/menu/my-street-menu-demo`);
-        }
-    }, []);
+  const isOnQrPage = pathname.startsWith('/vendor/qr');
+  if (!isOnQrPage) return null;
 
-    return (
-        <div
-            className="w-full flex flex-col items-start md:ml-28 lg:ml-44 justify-start py-2 mt-1 min-h-[calc(100vh-200px)]"
-            style={{ animation: 'qrFadeIn .25s ease both' }}
-        >
-            {tab === 'poster' ? (
-                <BurgerPosterTemplate
-                    vendorName="Vendor Name"
-                    vendorAddress="Vendor Address"
-                    publicMenuUrl={publicMenuUrl}
-                    accentColor="#f77512"
-                />
-            ) : (
-                <BurgerCardTemplate
-                    vendorName="Vendor Name"
-                    vendorAddress="Vendor Address"
-                    publicMenuUrl={publicMenuUrl}
-                    accentColor="#f77512"
-                />
-            )}
+  if (!isMounted) {
+    return <QrLoading />;
+  }
 
-            <style>{`
+  return (
+    <div
+      className="w-full flex flex-col items-start md:ml-28 lg:ml-44 justify-start py-2 mt-1 min-h-[calc(100vh-200px)]"
+      style={{ animation: 'qrFadeIn .2s ease both' }}
+    >
+      {tab === 'poster' ? (
+        <BurgerPosterTemplate
+          vendorName={vendorName}
+          publicMenuUrl={publicMenuUrl}
+          accentColor="#f77512"
+        />
+      ) : (
+        <BurgerCardTemplate
+          vendorName={vendorName}
+          publicMenuUrl={publicMenuUrl}
+          accentColor="#f77512"
+        />
+      )}
+
+      <style>{`
         @keyframes qrFadeIn {
-          from { opacity: 0; transform: translateY(12px); }
+          from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 }
 
 export default function QrSection() {
-    return (
-        <Suspense fallback={null}>
-            <QrContent />
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={<QrLoading />}>
+      <QrContent />
+    </Suspense>
+  );
 }

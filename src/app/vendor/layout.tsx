@@ -236,14 +236,11 @@ export const Header: React.FC = () => {
       </div>
     </header>
   );
-};
-
-interface CategoryNavProps {
+};interface CategoryNavProps {
   activeTab: string;
-  setActiveTab: (id: string) => void;
 }
 
-export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab, setActiveTab }) => {
+export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab }) => {
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 });
 
@@ -278,7 +275,6 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab, setActiveTa
                 key={cat.id}
                 ref={(el) => { tabRefs.current[index] = el; }}
                 href={path}
-                onClick={() => setActiveTab(cat.id)}
                 className={`relative flex items-center gap-2 px-5 py-[14px] min-w-max transition-colors bg-[#fdf8f3] ${isActive ? 'text-[#f77512]' : 'text-[#5C677D] hover:text-gray-00'
                   }`}
               >
@@ -339,7 +335,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const isAuthPath = AUTH_PATHS.includes(pathname);
 
-  // Helper to resolve active tab from URL path
+  // Helper to resolve active tab directly from URL path (strictly synchronized with router)
   const getTabFromPathname = (path: string) => {
     if (path.startsWith('/vendor/menu')) return 'menu';
     if (path.startsWith('/vendor/promotions')) return 'promotions';
@@ -348,16 +344,9 @@ export default function Layout({ children }: LayoutProps) {
     return 'home';
   };
 
-  const [activeTab, setActiveTab] = useState<string>(() => getTabFromPathname(pathname));
-  const [activeSubTab, setActiveSubTab] = useState<string>('');
-
-  // Synchronize state when the path changes (e.g. back/forward navigation)
-  useEffect(() => {
-    if (isAuthPath) return;
-    setActiveTab(getTabFromPathname(pathname));
-  }, [pathname, isAuthPath]);
-
+  const activeTab = getTabFromPathname(pathname);
   const currentSubNav = SUB_NAV_ITEMS[activeTab] || [];
+  const [activeSubTab, setActiveSubTab] = useState<string>('');
 
   // Sync activeSubTab from URL query string on client side
   useEffect(() => {
@@ -371,10 +360,6 @@ export default function Layout({ children }: LayoutProps) {
       setActiveSubTab('');
     }
   }, [pathname, currentSubNav]);
-
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
-  };
 
   const handleSubTabChange = (subTabId: string) => {
     setActiveSubTab(subTabId);
@@ -398,7 +383,7 @@ export default function Layout({ children }: LayoutProps) {
       `}} />
 
       <Header />
-      <CategoryNav activeTab={activeTab} setActiveTab={handleTabChange} />
+      <CategoryNav activeTab={activeTab} />
 
       <main className="w-full flex-1 min-h-[calc(100vh-136px)]">
         {currentSubNav.length > 0 ? (
