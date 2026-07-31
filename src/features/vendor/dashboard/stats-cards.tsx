@@ -4,34 +4,34 @@ import React, { useState } from 'react';
 
 export const MenuItemsCard: React.FC = () => {
   // SVG Donut Chart Math
-  const radius = 46;
+  const radius = 62;
   const circumference = 2 * Math.PI * radius;
   const progress = 85; 
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="bg-[#FAE5FD] rounded-[2rem] p-6 sm:p-7 flex flex-col items-center justify-between shadow-sm hover:shadow-md w-full h-[250px] transition-all">
+    <div className="bg-[#FAE5FD] rounded-[2rem] p-6 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-md w-full h-[250px] transition-all">
       <h3 className="text-[#C500D4] font-black text-lg sm:text-xl tracking-wide">Menu Items</h3>
       
       <div className="relative flex items-center justify-center">
-        <svg className="w-32 h-32 transform -rotate-90">
+        <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 160 160">
           {/* Background Track */}
           <circle
-            cx="64"
-            cy="64"
+            cx="80"
+            cy="80"
             r={radius}
             stroke="#E812F7"
             strokeOpacity="0.2"
-            strokeWidth="9"
+            strokeWidth="11"
             fill="transparent"
           />
           {/* Progress Ring */}
           <circle
-            cx="64"
-            cy="64"
+            cx="80"
+            cy="80"
             r={radius}
             stroke="#E812F7"
-            strokeWidth="9"
+            strokeWidth="11"
             fill="transparent"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -40,15 +40,7 @@ export const MenuItemsCard: React.FC = () => {
           />
         </svg>
         {/* Center Number */}
-        <span className="absolute text-[34px] sm:text-[38px] font-black text-[#B000BE]">120</span>
-      </div>
-
-      {/* Legend */}
-      <div className="flex text-xs sm:text-sm font-extrabold tracking-wide">
-        <div className="flex items-center gap-2 text-[#C500D4]">
-          <span className="w-3 h-3 rounded-full bg-[#E812F7]"></span>
-          Available
-        </div>
+        <span className="absolute text-[44px] sm:text-[50px] font-black text-[#B000BE] tracking-tight">120</span>
       </div>
     </div>
   );
@@ -66,26 +58,29 @@ export const MenuViewsCard: React.FC = () => {
   return (
     <div className="bg-[#FFEAD8] rounded-[2.5rem] relative overflow-hidden shadow-sm hover:shadow-md w-full h-[250px] flex transition-all">
       {/* Left Content */}
-      <div className="flex-1 p-6 sm:p-8 flex flex-col justify-center z-10">
+      <div className="flex-1 p-6 sm:p-7 flex flex-col justify-start z-10">
         <div>
-          <h3 className="text-[#E05A00] font-black text-xl sm:text-2xl tracking-tight mb-3">Menu Views</h3>
-          <p className="text-slate-500 text-xs font-bold tracking-wider uppercase mb-3">Time Period</p>
-          <ul className="space-y-2.5 text-slate-800 text-sm sm:text-base font-extrabold">
+          <h3 className="text-[#E05A00] font-black text-xl sm:text-2xl tracking-tight mb-4">Menu Views</h3>
+          <ul className="space-y-3.5 text-slate-800 text-sm sm:text-base font-extrabold">
             {(['Today', 'Yesterday', 'Last Week'] as const).map((date) => (
               <li
                 key={date}
                 onClick={() => setSelectedPeriod(date)}
-                className={`flex items-center gap-2.5 cursor-pointer transition-colors ${
+                className={`flex items-center gap-3.5 cursor-pointer py-0.5 transition-colors ${
                   selectedPeriod === date ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  className={`w-9 h-9 rounded-full transition-all shrink-0 flex items-center justify-center ${
                     selectedPeriod === date
-                      ? 'bg-[#F77512] shadow-[0_0_8px_#F77512] scale-110'
-                      : 'bg-slate-400'
+                      ? 'bg-[#F77512] shadow-[0_0_16px_rgba(247,117,18,0.6)] scale-105'
+                      : 'bg-slate-300/90 hover:bg-slate-400'
                   }`}
-                ></span>
+                >
+                  {selectedPeriod === date && (
+                    <span className="w-4 h-4 rounded-full bg-white"></span>
+                  )}
+                </span>
                 {date}
               </li>
             ))}

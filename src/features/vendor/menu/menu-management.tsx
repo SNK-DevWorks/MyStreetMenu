@@ -115,6 +115,7 @@ export default function MenuManagement() {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isCreatingCategoryInline, setIsCreatingCategoryInline] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   // ── Validation errors (Apple-style shake) ────────────────────────────────────
   const [fieldErrors, setFieldErrors] = useState<{ name?: boolean; price?: boolean; category?: boolean }>({});
@@ -222,15 +223,39 @@ export default function MenuManagement() {
     setIsCreatingCategoryInline(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
       setFormData((prev) => ({ ...prev, imagePreview: result, imageUrl: result }));
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelect(file);
   };
 
   const handleAddCategory = () => {
@@ -429,26 +454,32 @@ export default function MenuManagement() {
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} />}
 
-      {/* ── Proper Ultra-Slim Banner Card ── */}
-      <div className="bg-gradient-to-r from-[#f77512] to-[#ff9436] rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 text-white shadow-sm flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-base sm:text-lg font-black tracking-tight leading-none">
-            Manage &amp; Create Menu
-          </h1>
-          {shop?.name && (
-            <span className="hidden sm:inline-block bg-white/20 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-sm">
-              {shop.name}
-            </span>
-          )}
+      {/* ── Manage & Create Menu Banner Card ── */}
+      <div className="bg-gradient-to-r from-[#f77512] via-[#ff8826] to-[#ff9838] rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-white shadow-md hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/20 relative overflow-hidden">
+        <div className="flex flex-col gap-1.5 z-10">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight drop-shadow-sm">
+              Manage &amp; Create Menu
+            </h1>
+            {shop?.name && (
+              <span className="bg-white/25 text-white text-xs font-extrabold px-3 py-1 rounded-full backdrop-blur-md border border-white/30 shadow-sm">
+                {shop.name}
+              </span>
+            )}
+          </div>
         </div>
+
         <button
           type="button"
           onClick={handleOpenCreateModal}
-          className="bg-slate-900 hover:bg-black text-white font-bold px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 text-xs tracking-tight shrink-0 cursor-pointer border border-slate-700 active:scale-95"
+          className="bg-slate-900 hover:bg-black text-white font-black px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 text-xs sm:text-sm tracking-wide shrink-0 cursor-pointer border border-slate-700/80 active:scale-95 z-10 self-start sm:self-auto"
         >
-          <Plus size={15} className="text-[#f77512] stroke-[3]" />
+          <Plus size={18} className="text-[#f77512] stroke-[3]" />
           <span>Create Menu Item</span>
         </button>
+
+        {/* Decorative blur circle */}
+        <div className="absolute -right-8 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-xl pointer-events-none" />
       </div>
 
       {/* ── Categories Management Card (Under Manage & Create Menu) ── */}
@@ -735,41 +766,71 @@ export default function MenuManagement() {
                 <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
                   Food Image
                 </label>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden shrink-0">
-                    {formData.imagePreview ? (
-                      <img src={formData.imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-1 text-gray-400">
-                        <ImageIcon size={24} />
-                        <span className="text-[10px] font-bold">No Image</span>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`relative w-full h-44 sm:h-48 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden group select-none ${
+                    isDraggingImage
+                      ? 'border-[#f77512] bg-[#f77512]/10 scale-[1.01]'
+                      : formData.imagePreview
+                      ? 'border-gray-200 bg-slate-900 shadow-sm'
+                      : 'border-gray-300 bg-gray-50/80 hover:bg-white hover:border-[#f77512]/60 hover:shadow-sm'
+                  }`}
+                >
+                  {formData.imagePreview ? (
+                    <>
+                      <img
+                        src={formData.imagePreview}
+                        alt="Food preview"
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Overlay controls on image hover */}
+                      <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                        <label className="bg-white text-slate-900 text-xs font-extrabold px-4 py-2.5 rounded-full shadow-lg hover:bg-gray-100 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95">
+                          <Upload size={14} className="text-[#f77512]" />
+                          <span>Change Image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFormData((prev) => ({ ...prev, imagePreview: '', imageUrl: '' }));
+                          }}
+                          className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-full shadow-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        >
+                          <X size={14} />
+                          <span>Remove</span>
+                        </button>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 w-full flex flex-col gap-2">
-                    <label className="bg-slate-900 hover:bg-black text-white text-xs font-black py-3 px-5 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-sm w-fit active:scale-95">
-                      <Upload size={14} className="text-[#f77512]" />
-                      <span>Upload Image</span>
+                    </>
+                  ) : (
+                    <label className="w-full h-full flex flex-col items-center justify-center p-6 cursor-pointer gap-2.5">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
                       />
+                      <div className="w-14 h-14 rounded-2xl bg-[#f77512]/10 flex items-center justify-center text-[#f77512] shadow-sm group-hover:scale-110 group-hover:bg-[#f77512] group-hover:text-white transition-all duration-300">
+                        <Upload size={26} strokeWidth={2.5} />
+                      </div>
+                      <div className="flex flex-col items-center text-center gap-1">
+                        <p className="text-slate-900 font-extrabold text-sm sm:text-base tracking-tight">
+                          Upload Food Image
+                        </p>
+                        <p className="text-slate-500 font-semibold text-xs sm:text-sm">
+                          Drag & Drop or <span className="text-[#f77512] underline decoration-2 underline-offset-2 font-bold">Click to Upload</span>
+                        </p>
+                      </div>
                     </label>
-                    <span className="text-gray-400 text-xs font-medium">Or enter image URL:</span>
-                    <input
-                      type="url"
-                      id="menu-image-url"
-                      placeholder="https://images.unsplash.com/..."
-                      value={formData.imageUrl}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, imageUrl: e.target.value, imagePreview: e.target.value }))
-                      }
-                      className="w-full h-10 px-3.5 rounded-xl border border-gray-300 focus:border-[#f77512] outline-none text-slate-800 text-xs font-medium"
-                    />
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -797,7 +858,7 @@ export default function MenuManagement() {
               {/* 3. Description */}
               <div>
                 <label htmlFor="menu-item-desc" className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
-                  Description
+                  About this item
                 </label>
                 <textarea
                   id="menu-item-desc"
@@ -916,22 +977,27 @@ export default function MenuManagement() {
                 {/* Price */}
                 <div>
                   <label htmlFor="menu-item-price" className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
-                    Price (₹) *
+                    Price *
                   </label>
-                  <input
-                    id="menu-item-price"
-                    type="text"
-                    placeholder={fieldErrors.price ? 'Price is required' : 'e.g. 199'}
-                    value={formData.price}
-                    onChange={(e) => {
-                      setFormData((prev) => ({ ...prev, price: e.target.value }));
-                      if (fieldErrors.price) setFieldErrors((prev) => ({ ...prev, price: false }));
-                    }}
-                    className={`w-full h-12 px-4 rounded-xl border focus:ring-2 outline-none font-semibold text-base transition-all ${fieldErrors.price
-                        ? 'shake border-rose-400 ring-rose-200 bg-rose-50 placeholder-rose-400 focus:border-rose-400 focus:ring-rose-200'
-                        : 'border-gray-300 focus:border-[#f77512] focus:ring-[#f77512]/20 text-slate-800'
-                      }`}
-                  />
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-slate-900 font-extrabold text-base select-none">
+                      ₹
+                    </span>
+                    <input
+                      id="menu-item-price"
+                      type="text"
+                      placeholder={fieldErrors.price ? 'Price is required' : '199'}
+                      value={formData.price}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, price: e.target.value }));
+                        if (fieldErrors.price) setFieldErrors((prev) => ({ ...prev, price: false }));
+                      }}
+                      className={`w-full h-12 pl-9 pr-4 rounded-xl border focus:ring-2 outline-none font-semibold text-base transition-all ${fieldErrors.price
+                          ? 'shake border-rose-400 ring-rose-200 bg-rose-50 placeholder-rose-400 focus:border-rose-400 focus:ring-rose-200'
+                          : 'border-gray-300 focus:border-[#f77512] focus:ring-[#f77512]/20 text-slate-800'
+                        }`}
+                    />
+                  </div>
                 </div>
               </div>
 

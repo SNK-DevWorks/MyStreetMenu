@@ -69,7 +69,11 @@ export const TodaysSpecialsSection: React.FC = () => {
   });
 
   return (
-    <div className="w-full max-w-[1200px] mt-8 flex flex-col gap-6">
+    <div className="w-full max-w-[1200px] mt-24 sm:mt-32 flex flex-col gap-6">
+
+      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight px-1">
+        Daily Specials
+      </h2>
 
       {/* ─── Update Today's Special Banner Card ─── */}
       <div
@@ -85,16 +89,13 @@ export const TodaysSpecialsSection: React.FC = () => {
           {/* Left Text Content */}
           <div className="flex flex-col gap-1 text-center sm:text-left z-10">
             <div className="flex items-center gap-2 justify-center sm:justify-start">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[11px] font-black px-3 py-0.5 rounded-full border border-white/30 uppercase tracking-wider">
-                Daily Specials
-              </span>
               <span className="bg-slate-950/30 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
                 {specialItemIds.length} Selected
               </span>
             </div>
-            <h2 className="text-white text-xl sm:text-2xl md:text-3xl font-black tracking-wide drop-shadow-sm mt-1">
+            <p className="text-white text-xl sm:text-2xl md:text-3xl font-black tracking-wide drop-shadow-sm mt-1">
               Update Today's Special
-            </h2>
+            </p>
           </div>
 
           {/* Right Plus Button */}

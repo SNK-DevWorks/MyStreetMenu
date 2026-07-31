@@ -131,6 +131,9 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         return;
       }
 
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('msm_welcome_seen');
+      }
       const dest = getDestinationUrl(authData?.user);
       router.replace(dest);
       router.refresh();
@@ -164,6 +167,9 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         return;
       }
 
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('msm_welcome_seen');
+      }
       const dest = getDestinationUrl(data.user);
       router.replace(dest);
       router.refresh();

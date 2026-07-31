@@ -56,7 +56,7 @@ export const QuickActionsRow: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1200px] mt-8">
+    <div className="flex flex-col gap-6 w-full max-w-[1200px] mt-24 sm:mt-32">
       <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight px-1">
         Quick Actions
       </h2>

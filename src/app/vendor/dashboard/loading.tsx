@@ -5,9 +5,6 @@ export default function DashboardLoading() {
   return (
     <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 pb-12 flex flex-col items-center gap-8 w-full animate-in fade-in duration-200">
       
-      {/* Top Banner Card Skeleton */}
-      <Skeleton className="w-full max-w-[1200px] h-48 rounded-[2.5rem] bg-gray-200/80" />
-
       {/* 3 Stats Cards Skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-[1200px]">
         <Skeleton className="h-56 rounded-[2rem] bg-gray-200/70" />
@@ -16,10 +13,10 @@ export default function DashboardLoading() {
       </div>
 
       {/* Quick Actions Row Skeleton */}
-      <Skeleton className="w-full max-w-[1200px] h-24 rounded-3xl bg-gray-200/60" />
+      <Skeleton className="w-full max-w-[1200px] h-24 rounded-3xl bg-gray-200/60 mt-12 sm:mt-24" />
 
       {/* Popular Items Skeleton */}
-      <div className="w-full max-w-[1200px] flex flex-col gap-5 mt-4">
+      <div className="w-full max-w-[1200px] flex flex-col gap-5 mt-12 sm:mt-24">
         <div className="flex justify-between items-center">
           <div className="flex flex-col gap-2">
             <Skeleton className="w-48 h-7 rounded-xl bg-gray-200" />

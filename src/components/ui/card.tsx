@@ -1,20 +1,35 @@
 import React from 'react';
+import { X } from 'lucide-react';
 
 export interface CardProps {
   title?: string;
   subtitle?: string;
   className?: string;
+  onClose?: () => void;
 }
 
 export const Card: React.FC<CardProps> = ({
   title = "Manage Your Food Business",
   subtitle = "Manage your menu and track today's performance.",
   className = "",
+  onClose,
 }) => {
   return (
     <div className={`relative w-full max-w-[1200px] mt-4 sm:mt-6 md:mt-8 ${className}`}>
-      {/* Main Card Container without overflow-hidden so illustration head pops out of the top */}
+      {/* Main Card Container */}
       <div className="relative w-full bg-[#f77512] rounded-[24px] py-8 sm:py-10 md:py-12 px-6 sm:px-8 md:px-10 text-white shadow-[0_-12px_30px_rgba(0,0,0,0.22),0_12px_25px_rgba(0,0,0,0.15)] flex flex-col md:flex-row items-center justify-between min-h-[240px] sm:min-h-[260px] md:min-h-[280px]">
+
+        {/* Dismiss / Close Button */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/10 hover:bg-black/25 text-white/80 hover:text-white transition-colors cursor-pointer"
+            title="Dismiss message"
+          >
+            <X size={18} />
+          </button>
+        )}
 
         {/* Left Content */}
         <div className="z-10 flex flex-col items-start max-w-xl space-y-2 sm:space-y-3">
@@ -27,7 +42,7 @@ export const Card: React.FC<CardProps> = ({
           </p>
         </div>
 
-        {/* Right Illustration: Wrapper extends above card top (-55px) so head pops out, but clips at bottom rounded-b-[24px] so it never overflows card bottom */}
+        {/* Right Illustration */}
         <div className="absolute top-[-55px] bottom-0 left-0 right-0 rounded-b-[24px] overflow-hidden pointer-events-none select-none">
           <div className="absolute right-2 sm:right-6 md:right-10 bottom-0 flex items-end justify-center md:justify-end">
             <img
