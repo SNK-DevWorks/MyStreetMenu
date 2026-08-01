@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Eye, MonitorSmartphone, Smartphone, Monitor, Search, X, Star, Flame, Clock } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Eye, MonitorSmartphone, Smartphone, Monitor, Search, X, Star, Flame, Clock, Loader2 } from 'lucide-react';
 import { FoodCard, type FoodCardItem, type TimeframeType } from '@/components/shared/item';
-// Menu preview will load from DB in a future phase
-const items: FoodCardItem[] = [];
-
-const CATEGORIES = ['All'];
+import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { getMenuDataAction } from '@/actions/shop/get-menu-data';
+import { toFoodCardItem } from '@/lib/adapters/menu-adapter';
+import type { Shop } from '../../../../drizzle/schema/shops';
 
 type ViewMode = 'desktop' | 'mobile';
 
@@ -15,6 +15,34 @@ export default function MenuPreview() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeTimeframe, setActiveTimeframe] = useState<TimeframeType>('today');
+  
+  const [shop, setShop] = useState<Shop | null>(null);
+  const [items, setItems] = useState<FoodCardItem[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const shopRes = await getVendorShopAction();
+        if (shopRes.success && shopRes.data) {
+          setShop(shopRes.data);
+          const menuRes = await getMenuDataAction(shopRes.data.id);
+          if (menuRes.success && menuRes.data) {
+            setItems(menuRes.data.items.map(toFoodCardItem));
+            setCategories(['All', ...menuRes.data.categories.map(c => c.name)]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load menu preview data', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -24,7 +52,7 @@ export default function MenuPreview() {
         item.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch && item.isAvailable !== false;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [items, searchQuery, selectedCategory]);
 
   const tabs = [
     { id: 'today' as TimeframeType, label: "Today's", icon: Clock },
@@ -102,9 +130,11 @@ export default function MenuPreview() {
             {/* Vendor Banner */}
             <div className="bg-gradient-to-r from-[#f77512] to-[#ff9436] rounded-[1.5rem] p-5 text-white mb-5 relative overflow-hidden">
               <h1 className={`font-black tracking-tight leading-tight mb-1 ${viewMode === 'mobile' ? 'text-xl' : 'text-2xl sm:text-3xl'}`}>
-                Street Food Corner
+                {shop?.name || 'Street Food Corner'}
               </h1>
-              <p className="text-orange-100 text-xs font-medium">123 Market Street · Open Now · ⭐ 4.8</p>
+              <p className="text-orange-100 text-xs font-medium">
+                {shop?.address || '123 Market Street'} · Open Now · ⭐ 4.8
+              </p>
               <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
             </div>
 
@@ -129,7 +159,7 @@ export default function MenuPreview() {
 
               {/* Category pills */}
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                {CATEGORIES.map(cat => (
+                {categories.map(cat => (
                   <button
                     key={cat}
                     type="button"
@@ -168,7 +198,12 @@ export default function MenuPreview() {
             </div>
 
             {/* Menu Grid — same FoodCard in customer variant */}
-            {filteredItems.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                <Loader2 size={32} className="animate-spin text-[#f77512]" />
+                <p className="text-xs font-bold">Loading public menu preview...</p>
+              </div>
+            ) : filteredItems.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
                 <Search size={36} className="mx-auto mb-3 opacity-40" />
                 <p className="font-bold text-sm">No items found</p>

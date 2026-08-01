@@ -168,6 +168,25 @@ export const menuService = {
   },
 
   /**
+   * Bulk update today's specials for a shop.
+   */
+  async updateTodaysSpecials(userId: string, shopId: string, specialItemIds: string[]) {
+    const shop = await shopRepository.findById(shopId);
+    if (!shop || shop.userId !== userId) throw new Error('Unauthorized');
+
+    const items = await menuRepository.findByShopId(shopId);
+    const updates = items.map(async (item) => {
+      const shouldBeSpecial = specialItemIds.includes(item.id);
+      if (item.isTodaysSpecial !== shouldBeSpecial) {
+        return menuRepository.update(item.id, { isTodaysSpecial: shouldBeSpecial });
+      }
+    });
+
+    await Promise.all(updates);
+    return true;
+  },
+
+  /**
    * Get all menu items for a shop.
    */
   async getMenuByShop(shopId: string) {

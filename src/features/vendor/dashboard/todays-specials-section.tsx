@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Search, X, Check, Utensils, Plus, Flame } from 'lucide-react';
+import { Sparkles, Search, X, Check, Utensils, Plus, Flame, Loader2 } from 'lucide-react';
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
-// Today's specials will be powered by real DB data in a future update
+import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { getMenuDataAction } from '@/actions/shop/get-menu-data';
+import { updateTodaysSpecialsAction } from '@/actions/menu/update-todays-specials';
+import { toFoodCardItem } from '@/lib/adapters/menu-adapter';
 
 interface TodaysSpecialsSectionProps {
   className?: string;
@@ -12,7 +15,10 @@ interface TodaysSpecialsSectionProps {
 export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
   className = "mt-1 sm:mt-2"
 }) => {
-  const [items] = useState<FoodCardItem[]>([]);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [items, setItems] = useState<FoodCardItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Track IDs of items selected as Today's Specials
   const [specialItemIds, setSpecialItemIds] = useState<string[]>([]);
@@ -23,6 +29,30 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const shopRes = await getVendorShopAction();
+        if (shopRes.success && shopRes.data) {
+          setShopId(shopRes.data.id);
+          const menuRes = await getMenuDataAction(shopRes.data.id);
+          if (menuRes.success && menuRes.data) {
+            const foodCardItems = menuRes.data.items.map(toFoodCardItem);
+            setItems(foodCardItems);
+            const activeSpecials = foodCardItems.filter(i => i.isTodaysSpecial).map(i => i.id);
+            setSpecialItemIds(activeSpecials);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load Today's Specials items:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -51,12 +81,27 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
     );
   };
 
-  // Save selection
-  const handleSaveSpecials = () => {
-    setSpecialItemIds(tempSelectedIds);
-    setIsModalOpen(false);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  // Save selection to DB
+  const handleSaveSpecials = async () => {
+    if (!shopId) return;
+    setIsSaving(true);
+    try {
+      const res = await updateTodaysSpecialsAction(shopId, tempSelectedIds);
+      if (res.success) {
+        setSpecialItemIds(tempSelectedIds);
+        setItems(prev => prev.map(item => ({
+          ...item,
+          isTodaysSpecial: tempSelectedIds.includes(item.id),
+        })));
+        setIsModalOpen(false);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
+    } catch (err) {
+      console.error("Failed to save today's specials:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Derived list of current special items
@@ -76,6 +121,13 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
 
   return (
     <div className={`w-full max-w-[1200px] flex flex-col gap-6 ${className}`}>
+
+      {showToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
+          <Sparkles className="text-amber-400" size={18} />
+          <span className="text-xs font-bold">Today's Specials updated successfully!</span>
+        </div>
+      )}
 
       <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight px-1">
         Daily Specials
@@ -141,7 +193,12 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
           </button>
         </div>
 
-        {currentSpecials.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-white rounded-3xl p-10 text-center border border-gray-200/80 flex flex-col items-center justify-center min-h-[200px] gap-2">
+            <Loader2 size={28} className="animate-spin text-[#f77512]" />
+            <span className="text-xs font-bold text-slate-500">Loading specials...</span>
+          </div>
+        ) : currentSpecials.length === 0 ? (
           <div className="bg-white rounded-3xl p-10 text-center border border-gray-200/80 flex flex-col items-center justify-center min-h-[200px]">
             <Utensils size={40} className="text-gray-300 mb-2" />
             <h3 className="text-base font-bold text-slate-800 mb-4">No Specials Selected</h3>
@@ -177,12 +234,6 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
             <div className="bg-slate-900 text-white p-6 flex items-center justify-between shrink-0">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    Menu Selection
-                  </span>
-                  <span className="text-orange-400 font-extrabold text-xs">
-                    {tempSelectedIds.length} Items Selected
-                  </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
                   🔥 Select Today's Specials
@@ -224,8 +275,8 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${selectedCategory === cat
-                        ? 'bg-[#f77512] text-white shadow-sm'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
+                      ? 'bg-[#f77512] text-white shadow-sm'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
                       }`}
                   >
                     {cat}
@@ -236,9 +287,16 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
 
             {/* Scrollable Items Selection List */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col gap-2.5">
-              {filteredModalItems.length === 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
+                  <Loader2 size={24} className="animate-spin text-[#f77512]" />
+                  <span className="text-xs font-bold">Loading available items...</span>
+                </div>
+              ) : filteredModalItems.length === 0 ? (
                 <div className="text-center py-10 text-gray-400">
-                  <p className="text-sm font-bold">No menu items match your search.</p>
+                  <p className="text-sm font-bold">
+                    {items.length === 0 ? 'No menu items available. Please add items in your menu first.' : 'No menu items match your search.'}
+                  </p>
                 </div>
               ) : (
                 filteredModalItems.map(item => {
@@ -248,12 +306,13 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
                       key={item.id}
                       onClick={() => handleToggleItem(item.id)}
                       className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected
-                          ? 'bg-orange-50/80 border-[#f77512] shadow-sm'
-                          : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
+                        ? 'bg-orange-50/80 border-[#f77512] shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
                         }`}
                     >
                       {/* Left: Thumbnail & Info */}
                       <div className="flex items-center gap-3 min-w-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.image}
                           alt={item.title}
@@ -281,8 +340,8 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
 
                       {/* Right: Custom Styled Checkbox */}
                       <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-all ml-3 ${isSelected
-                          ? 'bg-[#f77512] text-white shadow-md scale-105'
-                          : 'bg-gray-100 border border-gray-300 text-transparent group-hover:border-gray-400'
+                        ? 'bg-[#f77512] text-white shadow-md scale-105'
+                        : 'bg-gray-100 border border-gray-300 text-transparent group-hover:border-gray-400'
                         }`}>
                         <Check size={16} className="stroke-[3]" />
                       </div>
@@ -314,9 +373,15 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveSpecials}
-                  className="bg-[#f77512] hover:bg-[#e05a00] text-white font-black px-6 py-2.5 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer flex items-center gap-2 active:scale-95"
+                  disabled={isSaving}
+                  className="bg-[#f77512] hover:bg-[#e05a00] text-white font-black px-6 py-2.5 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
                 >
-                  <Check size={16} /> Save Today's Specials ({tempSelectedIds.length})
+                  {isSaving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  Save Today's Specials ({tempSelectedIds.length})
                 </button>
               </div>
             </div>

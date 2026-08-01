@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import {
@@ -42,27 +42,7 @@ import type { Shop } from '../../../../drizzle/schema/shops';
 import type { Category } from '../../../../drizzle/schema/categories';
 import type { MenuItem } from '../../../../drizzle/schema/menu-items';
 
-// ——— Adapter: DB MenuItem → FoodCardItem ————————————————————————————————————————
-
-const FOOD_IMAGE_FALLBACK =
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2080&auto=format&fit=crop';
-
-function toFoodCardItem(item: MenuItemWithCategory): FoodCardItem {
-  return {
-    id: item.id,
-    title: item.name,
-    description: item.description ?? 'Freshly prepared vendor special.',
-    price: `₹${Number(item.price).toFixed(0)}`,
-    // imageUrl now holds an R2 key — resolve via CDN helper
-    image: item.imageUrl ? getMenuImage(item.imageUrl) : FOOD_IMAGE_FALLBACK,
-    category: item.categoryName,
-    foodType: (item.foodType as 'veg' | 'non-veg' | 'egg') ?? 'veg',
-    isBestseller: item.isBestSeller,
-    isTodaysSpecial: item.isTodaysSpecial,
-    isAvailable: !item.isSoldOut,
-    gradientColors: { mid: 'rgba(56, 45, 41, 0.85)', end: 'rgba(40, 30, 25, 0.98)' },
-  };
-}
+import { toFoodCardItem } from '@/lib/adapters/menu-adapter';
 
 // ——— Form State ———————————————————————————————————————————————————————————————
 

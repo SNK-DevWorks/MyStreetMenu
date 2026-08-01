@@ -3,18 +3,19 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Star, Flame, Clock, Utensils } from 'lucide-react';
 import { FoodCard, type FoodCardItem, type TimeframeType } from '@/components/shared/item';
-// Public menu items will be loaded from DB — placeholder until wired
-const items: FoodCardItem[] = [];
-const CATEGORIES = ['All'];
 
 interface PublicMenuViewProps {
   vendorName?: string;
   vendorAddress?: string;
+  items?: FoodCardItem[];
+  categories?: string[];
 }
 
 export default function PublicMenuView({
   vendorName = 'Street Food Corner',
   vendorAddress = '123 Market Street · Open Now · ⭐ 4.8',
+  items = [],
+  categories = ['All'],
 }: PublicMenuViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -28,7 +29,7 @@ export default function PublicMenuView({
         item.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch && item.isAvailable !== false;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [items, searchQuery, selectedCategory]);
 
   const tabs = [
     { id: 'today' as TimeframeType, label: "Today's", icon: Clock },
@@ -82,7 +83,7 @@ export default function PublicMenuView({
 
           {/* Category pills */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat}
                 type="button"
