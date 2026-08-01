@@ -1,7 +1,7 @@
 'use server';
 
 import { updateMenuItemSchema } from '@/lib/validations/menu.schema';
-import { menuService } from '@/services';
+import { menuService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import type { ActionResponse } from '@/types/action-response';
 import type { MenuItem } from '../../../drizzle/schema/menu-items';
@@ -12,7 +12,7 @@ export async function updateMenuAction(formData: FormData): Promise<ActionRespon
     name: (formData.get('name') as string) || undefined,
     description: (formData.get('description') as string) || undefined,
     price: (formData.get('price') as string) || undefined,
-    imageUrl: (formData.get('imageUrl') as string) || undefined,
+    imageUrl: (formData.get('imageKey') as string) || undefined,
     foodType: (formData.get('foodType') as string) || undefined,
     categoryId: (formData.get('categoryId') as string) || undefined,
     isBestSeller: formData.has('isBestSeller') ? formData.get('isBestSeller') === 'true' : undefined,
@@ -29,6 +29,8 @@ export async function updateMenuAction(formData: FormData): Promise<ActionRespon
     const userId = await getCurrentUserId();
     const { id, ...data } = parsed.data;
     const item = await menuService.updateMenuItem(userId, id, data);
+    // item.shopId is always present — republish after successful DB write
+    if (item) publishService.publishMenuBackground(item.shopId);
     return { success: true, data: item ?? undefined };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update menu item' };

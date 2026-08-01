@@ -17,6 +17,9 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import { uploadMenuImageAction } from '@/actions/menu/upload-menu-image';
+import { getMenuImage } from '@/lib/images';
+
 import MenuLoading from '@/app/vendor/menu/loading';
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
 
@@ -36,15 +39,17 @@ import type { MenuItem } from '../../../../drizzle/schema/menu-items';
 
 // ─── Adapter: DB MenuItem → FoodCardItem ─────────────────────────────────────
 
+const FOOD_IMAGE_FALLBACK =
+  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2080&auto=format&fit=crop';
+
 function toFoodCardItem(item: MenuItemWithCategory): FoodCardItem {
   return {
     id: item.id,
     title: item.name,
     description: item.description ?? 'Freshly prepared vendor special.',
     price: `₹${Number(item.price).toFixed(0)}`,
-    image:
-      item.imageUrl ||
-      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2080&auto=format&fit=crop',
+    // imageUrl now holds an R2 key — resolve via CDN helper
+    image: item.imageUrl ? getMenuImage(item.imageUrl) : FOOD_IMAGE_FALLBACK,
     category: item.categoryName,
     foodType: (item.foodType as 'veg' | 'non-veg' | 'egg') ?? 'veg',
     isBestseller: item.isBestSeller,
@@ -64,8 +69,12 @@ interface FormState {
   foodType: 'veg' | 'non-veg' | 'egg';
   isBestSeller: boolean;
   isTodaysSpecial: boolean;
+  /** R2 object key (stored in DB). Empty string = no image. */
   imageUrl: string;
+  /** Local blob/data URL — only used for preview in the modal. */
   imagePreview: string;
+  /** Raw File object to upload on save. Null if no new file chosen. */
+  imageFile: File | null;
 }
 
 const DEFAULT_FORM: FormState = {
@@ -78,6 +87,7 @@ const DEFAULT_FORM: FormState = {
   isTodaysSpecial: false,
   imageUrl: '',
   imagePreview: '',
+  imageFile: null,
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -130,6 +140,8 @@ export default function MenuManagement() {
   const [isUpdatingCategory, startUpdatingCategoryTransition] = useTransition();
   const [isDeletingCategory, startDeletingCategoryTransition] = useTransition();
   const [isTogglingId, setIsTogglingId] = useState<string | null>(null);
+  /** True while the image is being uploaded to R2 (before DB save) */
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // ── Toast helper ─────────────────────────────────────────────────────────────
   const notify = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -214,8 +226,10 @@ export default function MenuManagement() {
       foodType: (dbItem.foodType as 'veg' | 'non-veg' | 'egg') ?? 'veg',
       isBestSeller: dbItem.isBestSeller,
       isTodaysSpecial: dbItem.isTodaysSpecial,
+      // imageUrl holds the R2 key; resolve it for preview via CDN
       imageUrl: dbItem.imageUrl ?? '',
-      imagePreview: dbItem.imageUrl ?? '',
+      imagePreview: dbItem.imageUrl ? getMenuImage(dbItem.imageUrl) : '',
+      imageFile: null, // no new file chosen yet
     });
     setFieldErrors({});
     setIsModalOpen(true);
@@ -225,12 +239,9 @@ export default function MenuManagement() {
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setFormData((prev) => ({ ...prev, imagePreview: result, imageUrl: result }));
-    };
-    reader.readAsDataURL(file);
+    // Store the raw File for upload on save, and create a local preview blob
+    const previewUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({ ...prev, imagePreview: previewUrl, imageFile: file }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,19 +356,43 @@ export default function MenuManagement() {
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      // Auto-clear after animation completes
       setTimeout(() => setFieldErrors({}), 820);
       return;
     }
 
     startSavingTransition(async () => {
+      // ── Step 1: Upload image to R2 (if a new file was selected) ──────────────
+      let imageKey = formData.imageUrl; // default: keep existing key or empty
+
+      if (formData.imageFile) {
+        setIsUploadingImage(true);
+        try {
+          const uploadFd = new FormData();
+          uploadFd.append('file', formData.imageFile);
+          uploadFd.append('shopId', shop.id);
+          uploadFd.append('imageType', 'menu');
+          uploadFd.append('format', 'webp');
+
+          const uploadResult = await uploadMenuImageAction(uploadFd);
+
+          if (!uploadResult.success || !uploadResult.data) {
+            notify(uploadResult.error ?? 'Image upload failed.', 'error');
+            return;
+          }
+          imageKey = uploadResult.data.key;
+        } finally {
+          setIsUploadingImage(false);
+        }
+      }
+
+      // ── Step 2: Save to DB (with imageKey) ────────────────────────────────────
       const fd = new FormData();
       fd.append('shopId', shop.id);
       fd.append('categoryId', formData.categoryId);
       fd.append('name', formData.name.trim());
       fd.append('description', formData.description.trim());
       fd.append('price', formData.price.replace(/[^0-9.]/g, ''));
-      fd.append('imageUrl', formData.imageUrl);
+      fd.append('imageKey', imageKey); // R2 object key (or empty)
       fd.append('foodType', formData.foodType);
       fd.append('isBestSeller', String(formData.isBestSeller));
       fd.append('isSoldOut', 'false');
@@ -375,6 +410,15 @@ export default function MenuManagement() {
           }
           notify(`"${formData.name}" updated successfully!`);
         } else {
+          // ── Rollback: DB failed — delete the just-uploaded image from R2 ──
+          if (formData.imageFile && imageKey) {
+            // Fire-and-forget: best effort cleanup
+            fetch('/api/images/delete', {
+              method: 'POST',
+              body: JSON.stringify({ key: imageKey }),
+              headers: { 'Content-Type': 'application/json' },
+            }).catch(() => {});
+          }
           notify(result.error ?? 'Failed to update item', 'error');
           return;
         }
@@ -388,6 +432,14 @@ export default function MenuManagement() {
           setDbItems((prev) => [newItem, ...prev]);
           notify(`"${formData.name}" added to menu!`);
         } else {
+          // ── Rollback: DB failed — delete the just-uploaded image from R2 ──
+          if (formData.imageFile && imageKey) {
+            fetch('/api/images/delete', {
+              method: 'POST',
+              body: JSON.stringify({ key: imageKey }),
+              headers: { 'Content-Type': 'application/json' },
+            }).catch(() => {});
+          }
           notify(result.error ?? 'Failed to create item', 'error');
           return;
         }
@@ -801,7 +853,7 @@ export default function MenuManagement() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setFormData((prev) => ({ ...prev, imagePreview: '', imageUrl: '' }));
+                            setFormData((prev) => ({ ...prev, imagePreview: '', imageUrl: '', imageFile: null }));
                           }}
                           className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-full shadow-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                         >
@@ -1079,15 +1131,15 @@ export default function MenuManagement() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || isUploadingImage}
                   className="bg-[#f77512] hover:bg-[#e05a00] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black px-7 py-3 rounded-xl shadow-md transition-all text-sm cursor-pointer flex items-center gap-2 active:scale-95"
                 >
-                  {isSaving ? (
+                  {(isSaving || isUploadingImage) ? (
                     <Loader2 size={16} className="animate-spin" />
                   ) : (
                     <Plus size={18} />
                   )}
-                  {isSaving ? 'Saving...' : editingItemId ? 'Save Changes' : 'Create Item'}
+                  {isUploadingImage ? 'Uploading Image...' : isSaving ? 'Saving...' : editingItemId ? 'Save Changes' : 'Create Item'}
                 </button>
               </div>
             </form>

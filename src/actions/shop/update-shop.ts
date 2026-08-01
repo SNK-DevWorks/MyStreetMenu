@@ -1,7 +1,7 @@
 'use server';
 
 import { updateShopSchema } from '@/lib/validations/shop.schema';
-import { shopService } from '@/services';
+import { shopService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import { resolveLocationInput } from '@/lib/resolve-maps';
 import { createClient } from '@/lib/supabase/server';
@@ -56,6 +56,9 @@ export async function updateShopAction(formData: FormData): Promise<ActionRespon
     } catch {
       // Auth metadata sync failsafe
     }
+
+    // Republish: if menuVisibility changed to 'private', publishService will delete the R2 file
+    if (shop) publishService.publishMenuBackground(shop.id);
 
     return { success: true, data: shop ?? undefined };
   } catch (error) {

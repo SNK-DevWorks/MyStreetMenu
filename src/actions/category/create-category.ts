@@ -1,7 +1,7 @@
 'use server';
 
 import { createCategorySchema } from '@/lib/validations/category.schema';
-import { categoryService } from '@/services';
+import { categoryService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import type { ActionResponse } from '@/types/action-response';
 import type { Category } from '../../../drizzle/schema/categories';
@@ -20,6 +20,7 @@ export async function createCategoryAction(formData: FormData): Promise<ActionRe
   try {
     const userId = await getCurrentUserId();
     const category = await categoryService.createCategory(userId, parsed.data);
+    publishService.publishMenuBackground(parsed.data.shopId);
     return { success: true, data: category };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create category' };

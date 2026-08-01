@@ -9,7 +9,7 @@ export const createMenuItemSchema = z.object({
   name: z.string().min(1, 'Item name is required').max(100, 'Name too long'),
   description: z.string().max(500, 'Description too long').optional(),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format'),
-  imageUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  imageUrl: z.string().max(500, 'Image key too long').optional().or(z.literal('')),
   foodType: z.enum(FOOD_TYPES).default('veg'),
   isBestSeller: z.boolean().optional().default(false),
   isSoldOut: z.boolean().optional().default(false),

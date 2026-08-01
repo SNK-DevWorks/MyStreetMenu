@@ -1,7 +1,7 @@
 'use server';
 
 import { createMenuItemSchema } from '@/lib/validations/menu.schema';
-import { menuService } from '@/services';
+import { menuService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import type { ActionResponse } from '@/types/action-response';
 import type { MenuItem } from '../../../drizzle/schema/menu-items';
@@ -13,7 +13,7 @@ export async function createMenuAction(formData: FormData): Promise<ActionRespon
     name: formData.get('name') as string,
     description: (formData.get('description') as string) || undefined,
     price: formData.get('price') as string,
-    imageUrl: (formData.get('imageUrl') as string) || undefined,
+    imageUrl: (formData.get('imageKey') as string) || undefined,
     foodType: (formData.get('foodType') as string) || 'veg',
     isBestSeller: formData.get('isBestSeller') === 'true',
     isSoldOut: formData.get('isSoldOut') === 'true',
@@ -31,6 +31,8 @@ export async function createMenuAction(formData: FormData): Promise<ActionRespon
       ...parsed.data,
       price: parsed.data.price,
     });
+    // Republish after DB write succeeds — fire-and-forget, vendor is not blocked
+    publishService.publishMenuBackground(parsed.data.shopId);
     return { success: true, data: item };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create menu item' };

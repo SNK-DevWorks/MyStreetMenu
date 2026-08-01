@@ -1,0 +1,52 @@
+'use server';
+
+import { getCurrentUserId } from '@/lib/auth/get-user';
+import { shopRepository } from '@/repositories';
+import { imageUploadService } from '@/services/image-upload.service';
+import type { ActionResponse } from '@/types/action-response';
+import type { ImageType, OutputFormat } from '@/services/image-upload.service';
+
+export async function uploadMenuImageAction(
+  formData: FormData,
+): Promise<ActionResponse<{ key: string }>> {
+  try {
+    // 1. Auth
+    const userId = await getCurrentUserId();
+
+    // 2. Extract fields
+    const file = formData.get('file') as File | null;
+    const shopId = formData.get('shopId') as string | null;
+    const imageType = (formData.get('imageType') as ImageType | null) ?? 'menu';
+    const format = (formData.get('format') as OutputFormat | null) ?? 'webp';
+
+    if (!file || !(file instanceof File)) {
+      return { success: false, error: 'No file provided.' };
+    }
+    if (!shopId) {
+      return { success: false, error: 'Missing shopId.' };
+    }
+
+    // 3. Verify shop ownership
+    const shop = await shopRepository.findById(shopId);
+    if (!shop) return { success: false, error: 'Shop not found.' };
+    if (shop.userId !== userId) return { success: false, error: 'Unauthorized.' };
+
+    // 4. Convert File → Buffer for server-side processing
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 5. Process + upload
+    const { key } = await imageUploadService.processAndUploadImage(
+      buffer,
+      file.type,
+      shopId,
+      imageType,
+      format,
+    );
+
+    return { success: true, data: { key } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Image upload failed.';
+    return { success: false, error: message };
+  }
+}

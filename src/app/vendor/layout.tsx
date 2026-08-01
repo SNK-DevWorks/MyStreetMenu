@@ -120,7 +120,7 @@ export const Header: React.FC = () => {
       : 'https://maps.google.com';
 
   return (
-    <header className="sticky top-0 z-50 bg-[#fdf8f3] border-b border-gray-200">
+    <header className="bg-[#fdf8f3] border-b border-gray-200/80">
       <div className="max-w-[1536px] mx-auto px-4 md:px-8 h-[86px] flex items-center justify-between">
 
         {/* Left: Logo + Address trigger */}
@@ -256,7 +256,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab }) => {
   }, [activeTab]);
 
   return (
-    <nav className="sticky top-[86px] z-40 border-b border-gray-200 bg-[#fdf8f3] overflow-x-auto no-scrollbar">
+    <nav className="border-b border-gray-200 bg-[#fdf8f3] overflow-x-auto no-scrollbar">
       <div className="max-w-[1536px] mx-auto px-4 md:px-8 flex">
         {/* Wrap in a relative container so the indicator can be absolutely positioned */}
         <div className="relative flex items-center ml-0 md:ml-64 lg:ml-72 xl:ml-80">
@@ -372,7 +372,7 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#fdf8f3] font-sans flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#fdf8f3] font-sans flex flex-col justify-between">
       {/* Global Styles */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -382,14 +382,17 @@ export default function Layout({ children }: LayoutProps) {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      <Header />
-      <CategoryNav activeTab={activeTab} />
+      {/* Sticky Header & Category Navigation Wrapper */}
+      <div className="sticky top-0 z-50 bg-[#fdf8f3] shadow-xs">
+        <Header />
+        <CategoryNav activeTab={activeTab} />
+      </div>
 
       <main className="w-full flex-1 min-h-[calc(100vh-136px)]">
         {currentSubNav.length > 0 ? (
-          <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-8 pb-10 flex flex-col md:flex-row gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
+          <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 md:pt-6 pb-10 flex flex-col md:flex-row gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
             {/* Left Sub-Navigation */}
-            <div className="w-full md:w-[240px] shrink-0 flex flex-col gap-4 lg:ml-12 mt-2">
+            <div className="w-full md:w-[240px] shrink-0 flex flex-col gap-4 lg:ml-12 mt-2 md:sticky md:top-[155px]">
               {currentSubNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeSubTab === item.id;

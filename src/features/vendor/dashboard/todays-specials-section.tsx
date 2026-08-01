@@ -5,7 +5,13 @@ import { Sparkles, Search, X, Check, Utensils, Plus, Flame } from 'lucide-react'
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
 // Today's specials will be powered by real DB data in a future update
 
-export const TodaysSpecialsSection: React.FC = () => {
+interface TodaysSpecialsSectionProps {
+  className?: string;
+}
+
+export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
+  className = "mt-1 sm:mt-2"
+}) => {
   const [items] = useState<FoodCardItem[]>([]);
 
   // Track IDs of items selected as Today's Specials
@@ -69,7 +75,7 @@ export const TodaysSpecialsSection: React.FC = () => {
   });
 
   return (
-    <div className="w-full max-w-[1200px] mt-24 sm:mt-32 flex flex-col gap-6">
+    <div className={`w-full max-w-[1200px] flex flex-col gap-6 ${className}`}>
 
       <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight px-1">
         Daily Specials

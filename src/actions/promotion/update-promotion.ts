@@ -1,7 +1,7 @@
 'use server';
 
 import { updatePromotionSchema } from '@/lib/validations/promotion.schema';
-import { promotionService } from '@/services';
+import { promotionService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import type { ActionResponse } from '@/types/action-response';
 import type { Promotion } from '../../../drizzle/schema/promotions';
@@ -30,6 +30,7 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });
+    if (promo) publishService.publishMenuBackground(promo.shopId);
     return { success: true, data: promo ?? undefined };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update promotion' };

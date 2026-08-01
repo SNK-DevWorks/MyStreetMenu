@@ -1,7 +1,7 @@
 'use server';
 
 import { createPromotionSchema } from '@/lib/validations/promotion.schema';
-import { promotionService } from '@/services';
+import { promotionService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import type { ActionResponse } from '@/types/action-response';
 import type { Promotion } from '../../../drizzle/schema/promotions';
@@ -28,6 +28,7 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
       startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : null,
       endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
     });
+    publishService.publishMenuBackground(parsed.data.shopId);
     return { success: true, data: promo };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create promotion' };

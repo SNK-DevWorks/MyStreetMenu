@@ -1,4 +1,5 @@
 import { menuRepository, shopRepository, categoryRepository } from '@/repositories';
+import { imageUploadService } from './image-upload.service';
 import type { NewMenuItem } from '../../drizzle/schema/menu-items';
 
 function generateSlug(name: string): string {
@@ -46,6 +47,12 @@ export const menuService = {
       data.slug = generateSlug(data.name);
     }
 
+    // Delete old image from R2 if the image is being replaced or removed
+    const isImageChanging = 'imageUrl' in data && data.imageUrl !== item.imageUrl;
+    if (isImageChanging && item.imageUrl) {
+      await imageUploadService.deleteImage(item.imageUrl);
+    }
+
     return menuRepository.update(itemId, data);
   },
 
@@ -58,6 +65,11 @@ export const menuService = {
 
     const shop = await shopRepository.findById(item.shopId);
     if (!shop || shop.userId !== userId) throw new Error('Unauthorized');
+
+    // Delete image from R2 before removing the DB record
+    if (item.imageUrl) {
+      await imageUploadService.deleteImage(item.imageUrl);
+    }
 
     return menuRepository.delete(itemId);
   },

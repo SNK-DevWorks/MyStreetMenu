@@ -1,7 +1,7 @@
 'use server';
 
 import { toggleSoldOutSchema } from '@/lib/validations/menu.schema';
-import { menuService } from '@/services';
+import { menuService, publishService } from '@/services';
 import { getCurrentUserId } from '@/lib/auth/get-user';
 import type { ActionResponse } from '@/types/action-response';
 import type { MenuItem } from '../../../drizzle/schema/menu-items';
@@ -18,6 +18,8 @@ export async function toggleSoldOutAction(
   try {
     const userId = await getCurrentUserId();
     const item = await menuService.toggleSoldOut(userId, parsed.data.id, parsed.data.isSoldOut);
+    // isSoldOut is customer-facing — republish immediately
+    if (item) publishService.publishMenuBackground(item.shopId);
     return { success: true, data: item ?? undefined };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to toggle sold out' };

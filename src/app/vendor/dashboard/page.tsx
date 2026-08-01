@@ -79,7 +79,7 @@ export default function VendorDashboardPage() {
 
       <StatsCards />
       <QuickActionsRow />
-      <TodaysSpecialsSection />
+      <TodaysSpecialsSection className="mt-24 sm:mt-32" />
       <Item items={[]} />
     </div>
   );
