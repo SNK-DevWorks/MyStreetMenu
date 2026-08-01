@@ -29,6 +29,11 @@ export const menuRepository = {
     return item;
   },
 
+  async createMany(items: NewMenuItem[]) {
+    if (items.length === 0) return [];
+    return db.insert(menuItems).values(items).returning();
+  },
+
   async update(id: string, data: Partial<NewMenuItem>) {
     const [item] = await db
       .update(menuItems)

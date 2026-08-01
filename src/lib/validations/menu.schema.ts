@@ -26,6 +26,26 @@ export const toggleSoldOutSchema = z.object({
   isSoldOut: z.boolean(),
 });
 
+export const createMenuItemsBatchSchema = z.object({
+  shopId: z.string().uuid(),
+  items: z
+    .array(
+      z.object({
+        categoryId: z.string().uuid(),
+        name: z.string().min(1, 'Item name is required').max(100, 'Name too long'),
+        description: z.string().max(500, 'Description too long').optional(),
+        price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format'),
+        imageUrl: z.string().max(500, 'Image key too long').optional().or(z.literal('')),
+        foodType: z.enum(FOOD_TYPES).default('veg'),
+        isBestSeller: z.boolean().optional().default(false),
+        isSoldOut: z.boolean().optional().default(false),
+        isTodaysSpecial: z.boolean().optional().default(false),
+      })
+    )
+    .min(1, 'At least one item is required')
+    .max(50, 'Maximum 50 items per batch'),
+});
+
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 export type ToggleSoldOutInput = z.infer<typeof toggleSoldOutSchema>;

@@ -33,6 +33,60 @@ export const menuService = {
   },
 
   /**
+   * Batch-create multiple menu items in a single DB insert.
+   * Validates shop ownership once. Validates all referenced categories in parallel.
+   * Caller is responsible for uploading images beforehand.
+   */
+  async createMenuItemsBatch(
+    userId: string,
+    shopId: string,
+    items: Array<{
+      categoryId: string;
+      name: string;
+      description?: string;
+      price: string;
+      imageUrl?: string | null;
+      foodType: string;
+      isBestSeller: boolean;
+      isSoldOut: boolean;
+      isTodaysSpecial: boolean;
+    }>,
+  ) {
+    const shop = await shopRepository.findById(shopId);
+    if (!shop) throw new Error('Shop not found');
+    if (shop.userId !== userId) throw new Error('Unauthorized');
+
+    // Validate all unique categories belong to this shop (parallel)
+    const uniqueCategoryIds = [...new Set(items.map((i) => i.categoryId))];
+    const categoryResults = await Promise.all(
+      uniqueCategoryIds.map((id) => categoryRepository.findById(id)),
+    );
+    for (const cat of categoryResults) {
+      if (!cat || cat.shopId !== shopId) {
+        throw new Error(`Category not found in this shop`);
+      }
+    }
+
+    // Build insertable rows with generated slugs
+    const rows: NewMenuItem[] = items.map((item, index) => ({
+      shopId,
+      categoryId: item.categoryId,
+      name: item.name,
+      slug: generateSlug(item.name),
+      description: item.description ?? null,
+      price: item.price,
+      imageUrl: item.imageUrl ?? null,
+      foodType: item.foodType,
+      isBestSeller: item.isBestSeller,
+      isSoldOut: item.isSoldOut,
+      isTodaysSpecial: item.isTodaysSpecial,
+      sortOrder: index,
+    }));
+
+    return menuRepository.createMany(rows);
+  },
+
+  /**
    * Update a menu item.
    */
   async updateMenuItem(userId: string, itemId: string, data: Partial<NewMenuItem>) {
