@@ -28,6 +28,7 @@ import { getMenuImage } from '@/lib/images';
 import MenuLoading from '@/app/vendor/menu/loading';
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
 
+import { useVendor } from '@/context/vendor-context';
 import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
 import { getMenuDataAction, type MenuItemWithCategory } from '@/actions/shop/get-menu-data';
 import { createMenuAction } from '@/actions/menu/create-menu';
@@ -105,12 +106,14 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 // ——— Main Component ———————————————————————————————————————————————————————————
 
 export default function MenuManagement() {
+  const { shop: contextShop, categories: contextCategories, dbItems: contextDbItems, refetchMenu } = useVendor();
+
   // ——— Data state —————————————————————————————————————————————————————————————
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
-  const [shop, setShop] = useState<Shop | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [dbItems, setDbItems] = useState<MenuItemWithCategory[]>([]);
+  const [shop, setShop] = useState<Shop | null>(contextShop);
+  const [categories, setCategories] = useState<Category[]>(contextCategories);
+  const [dbItems, setDbItems] = useState<MenuItemWithCategory[]>(contextDbItems);
 
   // ——— UI state ———————————————————————————————————————————————————————————————
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,36 +164,15 @@ export default function MenuManagement() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // ——— Bootstrap: load shop + menu data on mount ——————————————————————————————
-  const bootstrap = useCallback(async () => {
-    setIsBootstrapping(true);
-    setBootstrapError(null);
-
-    const shopResult = await getVendorShopAction();
-    if (!shopResult.success || !shopResult.data) {
-      setBootstrapError(shopResult.error ?? 'Could not load your shop.');
-      setIsBootstrapping(false);
-      return;
-    }
-
-    const loadedShop = shopResult.data;
-    setShop(loadedShop);
-
-    const menuResult = await getMenuDataAction(loadedShop.id);
-    if (!menuResult.success || !menuResult.data) {
-      setBootstrapError(menuResult.error ?? 'Could not load menu data.');
-      setIsBootstrapping(false);
-      return;
-    }
-
-    setCategories(menuResult.data.categories);
-    setDbItems(menuResult.data.items);
-    setIsBootstrapping(false);
-  }, []);
-
+  // Sync state with context
   useEffect(() => {
-    bootstrap();
-  }, [bootstrap]);
+    if (contextShop) {
+      setShop(contextShop);
+      setCategories(contextCategories);
+      setDbItems(contextDbItems);
+      setIsBootstrapping(false);
+    }
+  }, [contextShop, contextCategories, contextDbItems]);
 
   // ——— Body scroll lock when modal open ———————————————————————————————————————
   useEffect(() => {
@@ -877,7 +859,7 @@ export default function MenuManagement() {
         <h2 className="text-2xl font-black text-slate-800">Something went wrong</h2>
         <p className="text-slate-500 max-w-sm">{bootstrapError}</p>
         <button
-          onClick={bootstrap}
+          onClick={() => refetchMenu()}
           className="flex items-center gap-2 bg-[#f77512] text-white font-bold px-6 py-3 rounded-2xl hover:bg-[#e05a00] transition-colors cursor-pointer"
         >
           <RefreshCw size={16} /> Retry

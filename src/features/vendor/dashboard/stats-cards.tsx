@@ -2,41 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { useVendor } from '@/context/vendor-context';
 import { getMenuDataAction } from '@/actions/shop/get-menu-data';
 
 export const MenuItemsCard: React.FC<{ count?: number }> = ({ count: initialCount }) => {
-  const [itemCount, setItemCount] = useState<number | null>(initialCount ?? null);
-  const [availableCount, setAvailableCount] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(initialCount === undefined);
-
-  useEffect(() => {
-    if (initialCount !== undefined) return;
-    async function loadItemCount() {
-      setIsLoading(true);
-      try {
-        const shopRes = await getVendorShopAction();
-        if (shopRes.success && shopRes.data) {
-          const menuRes = await getMenuDataAction(shopRes.data.id);
-          if (menuRes.success && menuRes.data) {
-            setItemCount(menuRes.data.items.length);
-            setAvailableCount(menuRes.data.items.filter(i => !i.isSoldOut).length);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load menu items count:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadItemCount();
-  }, [initialCount]);
+  const { dbItems, menuLoading } = useVendor();
+  
+  const total = initialCount ?? dbItems.length;
+  const available = dbItems.filter(i => !i.isSoldOut).length;
+  const isLoading = initialCount === undefined && menuLoading;
 
   // SVG Donut Chart Math
   const radius = 62;
   const circumference = 2 * Math.PI * radius;
-  const total = itemCount ?? 0;
-  const available = availableCount ?? total;
   const progress = total > 0 ? (available / total) * 100 : 0;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 

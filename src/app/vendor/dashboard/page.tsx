@@ -6,43 +6,29 @@ import StatsCards from '@/features/vendor/dashboard/stats-cards';
 import QuickActionsRow from '@/features/vendor/dashboard/quick-actions';
 import TodaysSpecialsSection from '@/features/vendor/dashboard/todays-specials-section';
 import Item from '@/components/shared/item';
-import DashboardLoading from '@/app/vendor/dashboard/loading';
-import { createClient } from '@/lib/supabase/client';
+import { useVendor } from '@/context/vendor-context';
 
 export default function VendorDashboardPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [vendorName, setVendorName] = useState('');
+  const { vendorName, loading: isLoading } = useVendor();
   const [showWelcomeCard, setShowWelcomeCard] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        const name =
-          user.user_metadata?.shop_name ||
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          '';
-        setVendorName(name);
+    // Check if welcome card has already been seen in this session
+    const hasSeenWelcome = sessionStorage.getItem('msm_welcome_seen');
+    if (!hasSeenWelcome) {
+      setShowWelcomeCard(true);
 
-        // Check if welcome card has already been seen in this session
-        const hasSeenWelcome = sessionStorage.getItem('msm_welcome_seen');
-        if (!hasSeenWelcome) {
-          setShowWelcomeCard(true);
-
-          // Auto-hide card smoothly after 15 seconds
-          setTimeout(() => {
-            setIsFadingOut(true);
-            setTimeout(() => {
-              setShowWelcomeCard(false);
-              sessionStorage.setItem('msm_welcome_seen', 'true');
-            }, 500);
-          }, 15000);
-        }
-      }
-      setIsLoading(false);
-    });
+      // Auto-hide card smoothly after 15 seconds
+      const timer = setTimeout(() => {
+        setIsFadingOut(true);
+        setTimeout(() => {
+          setShowWelcomeCard(false);
+          sessionStorage.setItem('msm_welcome_seen', 'true');
+        }, 500);
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const handleDismissWelcome = () => {
@@ -52,10 +38,6 @@ export default function VendorDashboardPage() {
       sessionStorage.setItem('msm_welcome_seen', 'true');
     }, 500);
   };
-
-  if (isLoading) {
-    return <DashboardLoading />;
-  }
 
   return (
     <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 pb-12 flex flex-col items-center animate-in fade-in duration-200">

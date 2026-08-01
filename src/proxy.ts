@@ -9,9 +9,17 @@ const PROTECTED_ADMIN_PREFIX = '/admin';
 const VENDOR_AUTH_PAGES = ['/vendor/login', '/vendor/signup'];
 const ADMIN_AUTH_PAGES = ['/admin/login'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  // ── Root page: authenticated vendors should always land in their dashboard ─
+  // This is what prevents the browser Back button from landing on the home page
+  // after login (router.replace on home + router.push on login together with
+  // this guard create a "can't escape the dashboard" effect for logged-in users).
+  if (user && pathname === '/') {
+    return NextResponse.redirect(new URL('/vendor/dashboard', request.url));
+  }
 
   // ── Vendor Route Protection ──────────────────────────────────
   if (pathname.startsWith(PROTECTED_VENDOR_PREFIX)) {

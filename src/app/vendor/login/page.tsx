@@ -135,7 +135,11 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         sessionStorage.removeItem('msm_welcome_seen');
       }
       const dest = getDestinationUrl(authData?.user);
-      router.replace(dest);
+      // router.push (not replace) keeps /vendor/login in the history stack.
+      // When the user presses Back, the proxy sees an authenticated user on
+      // /vendor/login (an auth page) and redirects them to /vendor/dashboard
+      // — so they effectively cannot leave the dashboard with the Back button.
+      router.push(dest);
       router.refresh();
     } else {
       // Signup flow
@@ -171,7 +175,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         sessionStorage.removeItem('msm_welcome_seen');
       }
       const dest = getDestinationUrl(data.user);
-      router.replace(dest);
+      router.push(dest);
       router.refresh();
     }
   };

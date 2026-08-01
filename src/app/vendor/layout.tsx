@@ -27,6 +27,8 @@ import {
   LucideIcon
 } from 'lucide-react';
 
+import { VendorProvider, useVendor } from '@/context/vendor-context';
+
 export interface CategoryItem {
   id: string;
   label: string;
@@ -63,44 +65,9 @@ export const SUB_NAV_ITEMS: Record<string, SubNavItem[]> = {
 };
 
 export const Header: React.FC = () => {
-  const [vendorName, setVendorName] = useState<string>('');
-  const [vendorLocation, setVendorLocation] = useState<string>('');
-  const [rawLocation, setRawLocation] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
+  const { vendorName, vendorLocation, rawLocation, loading } = useVendor();
   const [open, setOpen] = useState<boolean>(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    getVendorShopAction().then(async (res) => {
-      if (res.success && res.data) {
-        setVendorName(res.data.name || '');
-        setVendorLocation(res.data.address || '');
-        setRawLocation(res.data.mapUrl || res.data.address || '');
-        setLoading(false);
-      } else {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const name =
-            user.user_metadata?.shop_name ||
-            user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            user.email?.split('@')[0] ||
-            '';
-          const raw =
-            user.user_metadata?.address ||
-            user.user_metadata?.location ||
-            user.user_metadata?.shop_address ||
-            '';
-
-          setVendorName(name);
-          setRawLocation(raw);
-          setVendorLocation(user.user_metadata?.address || raw);
-        }
-        setLoading(false);
-      }
-    });
-  }, []);
 
   // Close popup when clicking outside
   useEffect(() => {
@@ -372,70 +339,72 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#fdf8f3] font-sans flex flex-col justify-between">
-      {/* Global Styles */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; margin: 0; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}} />
+    <VendorProvider>
+      <div className="min-h-screen bg-[#fdf8f3] font-sans flex flex-col justify-between">
+        {/* Global Styles */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          body { font-family: 'Inter', sans-serif; margin: 0; }
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        `}} />
 
-      {/* Sticky Header & Category Navigation Wrapper */}
-      <div className="sticky top-0 z-50 bg-[#fdf8f3] shadow-xs">
-        <Header />
-        <CategoryNav activeTab={activeTab} />
+        {/* Sticky Header & Category Navigation Wrapper */}
+        <div className="sticky top-0 z-50 bg-[#fdf8f3] shadow-xs">
+          <Header />
+          <CategoryNav activeTab={activeTab} />
+        </div>
+
+        <main className="w-full flex-1 min-h-[calc(100vh-136px)]">
+          {currentSubNav.length > 0 ? (
+            <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 md:pt-6 pb-10 flex flex-col md:flex-row gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
+              {/* Left Sub-Navigation */}
+              <div className="w-full md:w-[240px] shrink-0 flex flex-col gap-4 lg:ml-12 mt-2 md:sticky md:top-[155px]">
+                {currentSubNav.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeSubTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSubTabChange(item.id)}
+                      className={`relative flex items-center gap-4 text-left transition-all duration-150 group py-2.5 px-3.5 rounded-xl cursor-pointer ${
+                        isActive
+                          ? 'bg-orange-100/80 text-[#f77512] font-semibold'
+                          : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/60'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-[22px] h-[22px] ${isActive ? 'text-[#f77512]' : 'text-gray-500 group-hover:text-gray-700'}`}
+                        strokeWidth={1.5}
+                      />
+                      <span className={`text-[15px] font-medium ${isActive
+                        ? 'text-[#f77512] font-bold'
+                        : 'text-gray-600 group-hover:text-gray-800'
+                        }`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Side: Main Content Area */}
+              <div className="flex-1 w-full bg-[#fdf8f3] min-h-[500px]">
+                <Suspense fallback={<MenuLoading />}>
+                  {children}
+                </Suspense>
+              </div>
+            </div>
+          ) : (
+            <Suspense fallback={<MenuLoading />}>
+              {children}
+            </Suspense>
+          )}
+        </main>
+
+        <Footer />
       </div>
-
-      <main className="w-full flex-1 min-h-[calc(100vh-136px)]">
-        {currentSubNav.length > 0 ? (
-          <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 md:pt-6 pb-10 flex flex-col md:flex-row gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
-            {/* Left Sub-Navigation */}
-            <div className="w-full md:w-[240px] shrink-0 flex flex-col gap-4 lg:ml-12 mt-2 md:sticky md:top-[155px]">
-              {currentSubNav.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeSubTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSubTabChange(item.id)}
-                    className={`relative flex items-center gap-4 text-left transition-all duration-150 group py-2.5 px-3.5 rounded-xl cursor-pointer ${
-                      isActive
-                        ? 'bg-orange-100/80 text-[#f77512] font-semibold'
-                        : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/60'
-                    }`}
-                  >
-                    <Icon
-                      className={`w-[22px] h-[22px] ${isActive ? 'text-[#f77512]' : 'text-gray-500 group-hover:text-gray-700'}`}
-                      strokeWidth={1.5}
-                    />
-                    <span className={`text-[15px] font-medium ${isActive
-                      ? 'text-[#f77512] font-bold'
-                      : 'text-gray-600 group-hover:text-gray-800'
-                      }`}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Right Side: Main Content Area */}
-            <div className="flex-1 w-full bg-[#fdf8f3] min-h-[500px]">
-              <Suspense fallback={<MenuLoading />}>
-                {children}
-              </Suspense>
-            </div>
-          </div>
-        ) : (
-          <Suspense fallback={<MenuLoading />}>
-            {children}
-          </Suspense>
-        )}
-      </main>
-
-      <Footer />
-    </div>
+    </VendorProvider>
   );
 }

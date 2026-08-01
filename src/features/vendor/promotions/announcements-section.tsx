@@ -4,7 +4,7 @@ import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { Plus, Edit3, Trash2, X, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
 import AnnouncementIcon from '@/components/icons/announcement-icon';
 
-import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { useVendor } from '@/context/vendor-context';
 import { getAllPromotionsByTypeAction } from '@/actions/promotion/get-promotions';
 import { createPromotionAction } from '@/actions/promotion/create-promotion';
 import { updatePromotionAction } from '@/actions/promotion/update-promotion';
@@ -25,9 +25,8 @@ function formatDate(date: Date | string | null | undefined): string {
 }
 
 export default function AnnouncementsSection() {
-  const [shopId, setShopId] = useState<string | null>(null);
-  const [announcements, setAnnouncements] = useState<Promotion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { shop, announcements: contextAnnouncements, promotionsLoading: isLoading, refetchPromotions } = useVendor();
+  const [announcements, setAnnouncements] = useState<Promotion[]>(contextAnnouncements);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Promotion | null>(null);
 
@@ -43,25 +42,9 @@ export default function AnnouncementsSection() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    const shopResult = await getVendorShopAction();
-    if (!shopResult.success || !shopResult.data) {
-      setIsLoading(false);
-      return;
-    }
-    setShopId(shopResult.data.id);
-
-    const result = await getAllPromotionsByTypeAction('announcement');
-    if (result.success && result.data) {
-      setAnnouncements(result.data);
-    }
-    setIsLoading(false);
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    setAnnouncements(contextAnnouncements);
+  }, [contextAnnouncements]);
 
   useEffect(() => {
     document.body.style.overflow = isModalOpen ? 'hidden' : '';
@@ -108,7 +91,7 @@ export default function AnnouncementsSection() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formMessage.trim() || !shopId) return;
+    if (!formMessage.trim() || !shop?.id) return;
 
     startSavingTransition(async () => {
       if (editingAnnouncement) {
@@ -127,7 +110,7 @@ export default function AnnouncementsSection() {
         }
       } else {
         const fd = new FormData();
-        fd.set('shopId', shopId);
+        fd.set('shopId', shop.id);
         fd.set('type', 'announcement');
         fd.set('title', formMessage.trim());
 

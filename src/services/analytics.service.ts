@@ -4,10 +4,18 @@ import type { NewAnalyticsEvent } from '../../drizzle/schema/analytics-events';
 
 export const analyticsService = {
   /**
-   * Track an analytics event.
+   * Track a single analytics event.
    */
   async trackEvent(data: Omit<NewAnalyticsEvent, 'id'>) {
     return analyticsRepository.recordEvent(data);
+  },
+
+  /**
+   * Track many events in one SQL INSERT — used by the batch API endpoint.
+   * Much cheaper than calling trackEvent() N times.
+   */
+  async trackBatch(events: Omit<NewAnalyticsEvent, 'id'>[]) {
+    return analyticsRepository.recordBatch(events as NewAnalyticsEvent[]);
   },
 
   /**

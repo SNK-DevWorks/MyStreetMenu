@@ -527,28 +527,28 @@ export default function BurgerCardTemplate({
       </div>
 
       {/* Action Buttons Below Card */}
-      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-[380px] mt-6">
+      <div className="grid grid-cols-3 gap-2.5 w-full max-w-[380px] mt-6">
         <button
           id="qr-share"
           type="button"
           onClick={handleShare}
-          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
+          className="flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
           style={{ borderColor: '#e2e8f0' }}
         >
-          <Share2 className="w-3.5 h-3.5 text-slate-500" strokeWidth={2} />
-          {shared ? 'Copied!' : 'Share'}
+          <Share2 className="w-4 h-4 text-slate-600" strokeWidth={2} />
+          <span className="whitespace-nowrap">{shared ? 'Copied!' : 'Share'}</span>
         </button>
 
         <button
           id="qr-download-only"
           type="button"
           onClick={handleDownloadQrOnly}
-          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
+          className="flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
           style={{ borderColor: '#e2e8f0' }}
           title="Download standalone high-resolution QR image"
         >
-          <QrCode className="w-3.5 h-3.5 text-slate-600" strokeWidth={2} />
-          Download QR
+          <QrCode className="w-4 h-4 text-slate-600" strokeWidth={2} />
+          <span className="whitespace-nowrap">Download QR</span>
         </button>
 
         <button
@@ -556,13 +556,13 @@ export default function BurgerCardTemplate({
           type="button"
           onClick={handleDownload}
           disabled={downloading}
-          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl font-extrabold text-xs text-white transition-all active:scale-95 cursor-pointer disabled:opacity-70 shadow-md hover:shadow-lg shrink-0"
+          className="flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-2xl font-extrabold text-xs text-white transition-all active:scale-95 cursor-pointer disabled:opacity-70 shadow-md hover:shadow-lg shrink-0"
           style={{
             background: `linear-gradient(135deg, ${accentColor}, #c95e00)`,
           }}
         >
-          <Download className="w-3.5 h-3.5" strokeWidth={2.5} />
-          {downloading ? 'Saving…' : 'Download Card'}
+          <Download className="w-4 h-4" strokeWidth={2.5} />
+          <span className="whitespace-nowrap">{downloading ? 'Saving…' : 'Download Card'}</span>
         </button>
       </div>
 

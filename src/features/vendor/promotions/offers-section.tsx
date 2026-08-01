@@ -4,7 +4,7 @@ import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { Plus, Calendar, Edit3, Power, Trash2, X, Check, Loader2 } from 'lucide-react';
 import OfferIcon from '@/components/icons/offer-icon';
 
-import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { useVendor } from '@/context/vendor-context';
 import { getAllPromotionsByTypeAction } from '@/actions/promotion/get-promotions';
 import { createPromotionAction } from '@/actions/promotion/create-promotion';
 import { updatePromotionAction } from '@/actions/promotion/update-promotion';
@@ -101,9 +101,8 @@ function formatEndDate(date: Date | string | null | undefined): string {
 }
 
 export default function OffersSection() {
-  const [shopId, setShopId] = useState<string | null>(null);
-  const [offers, setOffers] = useState<Promotion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { shop, offers: contextOffers, promotionsLoading: isLoading, refetchPromotions } = useVendor();
+  const [offers, setOffers] = useState<Promotion[]>(contextOffers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Promotion | null>(null);
 
@@ -123,26 +122,10 @@ export default function OffersSection() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Load shop + offers
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    const shopResult = await getVendorShopAction();
-    if (!shopResult.success || !shopResult.data) {
-      setIsLoading(false);
-      return;
-    }
-    setShopId(shopResult.data.id);
-
-    const offersResult = await getAllPromotionsByTypeAction('offer');
-    if (offersResult.success && offersResult.data) {
-      setOffers(offersResult.data);
-    }
-    setIsLoading(false);
-  }, []);
-
+  // Sync state with context
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    setOffers(contextOffers);
+  }, [contextOffers]);
 
   // Lock scroll when modal is open
   useEffect(() => {
@@ -196,7 +179,7 @@ export default function OffersSection() {
 
   const handleSaveOffer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle.trim() || !shopId) return;
+    if (!formTitle.trim() || !shop?.id) return;
 
     startSavingTransition(async () => {
       if (editingOffer) {
@@ -218,7 +201,7 @@ export default function OffersSection() {
         }
       } else {
         const fd = new FormData();
-        fd.set('shopId', shopId);
+        fd.set('shopId', shop.id);
         fd.set('type', 'offer');
         fd.set('title', formTitle);
         fd.set('description', formDescription);

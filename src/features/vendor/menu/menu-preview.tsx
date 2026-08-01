@@ -3,46 +3,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Eye, MonitorSmartphone, Smartphone, Monitor, Search, X, Star, Flame, Clock, Loader2 } from 'lucide-react';
 import { FoodCard, type FoodCardItem, type TimeframeType } from '@/components/shared/item';
-import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { useVendor } from '@/context/vendor-context';
 import { getMenuDataAction } from '@/actions/shop/get-menu-data';
 import { toFoodCardItem } from '@/lib/adapters/menu-adapter';
-import type { Shop } from '../../../../drizzle/schema/shops';
 
 type ViewMode = 'desktop' | 'mobile';
 
 export default function MenuPreview() {
+  const { shop, dbItems, categories: contextCategories, menuLoading: isLoading } = useVendor();
   const [viewMode, setViewMode] = useState<ViewMode>('desktop');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeTimeframe, setActiveTimeframe] = useState<TimeframeType>('today');
-  
-  const [shop, setShop] = useState<Shop | null>(null);
-  const [items, setItems] = useState<FoodCardItem[]>([]);
-  const [categories, setCategories] = useState<string[]>(['All']);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const shopRes = await getVendorShopAction();
-        if (shopRes.success && shopRes.data) {
-          setShop(shopRes.data);
-          const menuRes = await getMenuDataAction(shopRes.data.id);
-          if (menuRes.success && menuRes.data) {
-            setItems(menuRes.data.items.map(toFoodCardItem));
-            setCategories(['All', ...menuRes.data.categories.map(c => c.name)]);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load menu preview data', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
+  const items = useMemo(() => dbItems.map(toFoodCardItem), [dbItems]);
+  const categories = useMemo(() => ['All', ...contextCategories.map(c => c.name)], [contextCategories]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {

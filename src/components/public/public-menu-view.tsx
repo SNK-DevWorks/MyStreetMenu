@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X, Star, Flame, Clock, Utensils } from 'lucide-react';
 import { FoodCard, type FoodCardItem, type TimeframeType } from '@/components/shared/item';
+import { useAnalytics } from '@/providers/analytics-provider';
 
 interface PublicMenuViewProps {
   vendorName?: string;
   vendorAddress?: string;
+  phone?: string | null;
+  whatsapp?: string | null;
+  mapUrl?: string | null;
   items?: FoodCardItem[];
   categories?: string[];
 }
@@ -14,12 +18,21 @@ interface PublicMenuViewProps {
 export default function PublicMenuView({
   vendorName = 'Street Food Corner',
   vendorAddress = '123 Market Street · Open Now · ⭐ 4.8',
+  phone = null,
+  whatsapp = null,
+  mapUrl = null,
   items = [],
   categories = ['All'],
 }: PublicMenuViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeTimeframe, setActiveTimeframe] = useState<TimeframeType>('today');
+  const { track } = useAnalytics();
+
+  // Fire menu_view once on mount
+  useEffect(() => {
+    track('menu_view');
+  }, [track]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -37,6 +50,21 @@ export default function PublicMenuView({
     { id: 'thisMonth' as TimeframeType, label: 'This Month', icon: Flame },
   ];
 
+  const handleWhatsApp = () => {
+    track('whatsapp_click');
+  };
+
+  const handleDirections = () => {
+    track('direction_click');
+  };
+
+  const handleShare = () => {
+    track('share_click');
+    if (navigator.share) {
+      navigator.share({ title: vendorName, url: window.location.href }).catch(() => {});
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fdf8f3] text-slate-800 pb-16 select-none">
       {/* Public Header Navbar */}
@@ -45,9 +73,19 @@ export default function PublicMenuView({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/text-logo.png" alt="MyStreetMenu" className="h-8 object-contain" />
         </div>
-        <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-orange-50 px-3.5 py-1.5 rounded-full border border-orange-200/80">
-          <Utensils size={14} className="text-[#f77512]" />
-          <span>Digital Menu</span>
+        <div className="flex items-center gap-2">
+          {/* Share button */}
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition-all cursor-pointer"
+          >
+            Share
+          </button>
+          <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-orange-50 px-3.5 py-1.5 rounded-full border border-orange-200/80">
+            <Utensils size={14} className="text-[#f77512]" />
+            <span>Digital Menu</span>
+          </div>
         </div>
       </header>
 
@@ -59,6 +97,41 @@ export default function PublicMenuView({
             {vendorName}
           </h1>
           <p className="text-orange-100 text-xs sm:text-sm font-medium">{vendorAddress}</p>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 mt-4 flex-wrap">
+            {whatsapp && (
+              <a
+                href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleWhatsApp}
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition-all border border-white/30"
+              >
+                WhatsApp
+              </a>
+            )}
+            {mapUrl && (
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleDirections}
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition-all border border-white/30"
+              >
+                Directions
+              </a>
+            )}
+            {phone && (
+              <a
+                href={`tel:${phone}`}
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition-all border border-white/30"
+              >
+                Call
+              </a>
+            )}
+          </div>
+
           <div className="absolute -right-8 -bottom-8 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         </div>
 
@@ -131,12 +204,16 @@ export default function PublicMenuView({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {filteredItems.map(item => (
-              <FoodCard
+              <div
                 key={item.id}
-                {...item}
-                variant="customer"
-                activeTimeframe={activeTimeframe}
-              />
+                onClick={() => track('item_view', { itemId: item.id, itemName: item.title })}
+              >
+                <FoodCard
+                  {...item}
+                  variant="customer"
+                  activeTimeframe={activeTimeframe}
+                />
+              </div>
             ))}
           </div>
         )}

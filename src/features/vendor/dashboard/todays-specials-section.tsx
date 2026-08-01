@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Search, X, Check, Utensils, Plus, Flame, Loader2 } from 'lucide-react';
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
-import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
+import { useVendor } from '@/context/vendor-context';
 import { getMenuDataAction } from '@/actions/shop/get-menu-data';
 import { updateTodaysSpecialsAction } from '@/actions/menu/update-todays-specials';
 import { toFoodCardItem } from '@/lib/adapters/menu-adapter';
@@ -15,13 +15,15 @@ interface TodaysSpecialsSectionProps {
 export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
   className = "mt-1 sm:mt-2"
 }) => {
-  const [shopId, setShopId] = useState<string | null>(null);
-  const [items, setItems] = useState<FoodCardItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { shop, dbItems, menuLoading: isLoading, refetchMenu } = useVendor();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Track IDs of items selected as Today's Specials
-  const [specialItemIds, setSpecialItemIds] = useState<string[]>([]);
+  const items = React.useMemo(() => dbItems.map(toFoodCardItem), [dbItems]);
+  const specialItemIds = React.useMemo(
+    () => items.filter(i => i.isTodaysSpecial).map(i => i.id),
+    [items]
+  );
+  const shopId = shop?.id || null;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,30 +31,6 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showToast, setShowToast] = useState(false);
-
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const shopRes = await getVendorShopAction();
-        if (shopRes.success && shopRes.data) {
-          setShopId(shopRes.data.id);
-          const menuRes = await getMenuDataAction(shopRes.data.id);
-          if (menuRes.success && menuRes.data) {
-            const foodCardItems = menuRes.data.items.map(toFoodCardItem);
-            setItems(foodCardItems);
-            const activeSpecials = foodCardItems.filter(i => i.isTodaysSpecial).map(i => i.id);
-            setSpecialItemIds(activeSpecials);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load Today's Specials items:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -88,11 +66,7 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
     try {
       const res = await updateTodaysSpecialsAction(shopId, tempSelectedIds);
       if (res.success) {
-        setSpecialItemIds(tempSelectedIds);
-        setItems(prev => prev.map(item => ({
-          ...item,
-          isTodaysSpecial: tempSelectedIds.includes(item.id),
-        })));
+        await refetchMenu();
         setIsModalOpen(false);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);

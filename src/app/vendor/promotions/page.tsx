@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TodaysSpecialsSection from '@/features/vendor/dashboard/todays-specials-section';
 import OffersSection from '@/features/vendor/promotions/offers-section';
@@ -10,19 +10,6 @@ import PromotionsLoading from '@/app/vendor/promotions/loading';
 function PromotionsPageContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [tab]);
-
-  if (isLoading) {
-    return <PromotionsLoading />;
-  }
 
   if (tab === 'offers') {
     return <OffersSection />;
