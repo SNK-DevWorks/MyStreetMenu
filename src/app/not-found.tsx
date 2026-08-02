@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Home } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 export default function NotFound() {
   return (
@@ -12,18 +12,12 @@ export default function NotFound() {
             The page you are looking for doesn&apos;t exist or has been moved.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
+        <div className="w-full pt-2">
           <Link
             href="/"
-            className="flex-1 bg-slate-900 hover:bg-black text-white font-bold py-3 px-5 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all"
+            className="w-full bg-[#FF5A00] hover:bg-[#e04f00] text-white font-bold py-3.5 px-6 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all shadow-md"
           >
-            <ArrowLeft size={16} /> Home
-          </Link>
-          <Link
-            href="/vendor/dashboard"
-            className="flex-1 bg-[#FF5A00] hover:bg-[#e04f00] text-white font-bold py-3 px-5 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md"
-          >
-            <Home size={16} /> Dashboard
+            <Home size={18} /> Back to Home
           </Link>
         </div>
       </div>
