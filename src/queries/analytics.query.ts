@@ -43,6 +43,34 @@ export async function getShopStatsByDates(shopId: string, dates: string[]) {
       ),
     );
 }
+ 
+/**
+ * Sum shop stats for the current calendar month to date.
+ */
+export async function getShopStatsForMonth(shopId: string) {
+  const now = new Date();
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+
+  const [result] = await db
+    .select({
+      menuViews:       sql<number>`COALESCE(SUM(${dailyShopStats.menuViews}), 0)`,
+      uniqueVisitors:  sql<number>`COALESCE(SUM(${dailyShopStats.uniqueVisitors}), 0)`,
+      qrScans:         sql<number>`COALESCE(SUM(${dailyShopStats.qrScans}), 0)`,
+      shareClicks:     sql<number>`COALESCE(SUM(${dailyShopStats.shareClicks}), 0)`,
+      likeClicks:      sql<number>`COALESCE(SUM(${dailyShopStats.likeClicks}), 0)`,
+      whatsappClicks:  sql<number>`COALESCE(SUM(${dailyShopStats.whatsappClicks}), 0)`,
+      directionClicks: sql<number>`COALESCE(SUM(${dailyShopStats.directionClicks}), 0)`,
+    })
+    .from(dailyShopStats)
+    .where(
+      and(
+        eq(dailyShopStats.shopId, shopId),
+        gte(dailyShopStats.date, startOfMonth),
+      ),
+    );
+
+  return result;
+}
 
 /**
  * Get item stats with name + trend score computed in SQL.

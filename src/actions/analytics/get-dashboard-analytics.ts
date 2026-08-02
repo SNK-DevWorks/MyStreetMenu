@@ -23,6 +23,15 @@ export type DashboardAnalytics = {
     whatsappClicks: number;
     directionClicks: number;
   };
+  thisMonth: {
+    menuViews: number;
+    uniqueVisitors: number;
+    qrScans: number;
+    shareClicks: number;
+    likeClicks: number;
+    whatsappClicks: number;
+    directionClicks: number;
+  };
   topItems: {
     itemId: string;
     itemName: string;
@@ -45,12 +54,12 @@ export async function getDashboardAnalyticsAction(): Promise<DashboardAnalytics>
   try {
     userId = await getCurrentUserId();
   } catch {
-    return { today: EMPTY_DAY, yesterday: EMPTY_DAY, topItems: [] };
+    return { today: EMPTY_DAY, yesterday: EMPTY_DAY, thisMonth: EMPTY_DAY, topItems: [] };
   }
 
   const shop = await getVendorDashboardData(userId);
   if (!shop) {
-    return { today: EMPTY_DAY, yesterday: EMPTY_DAY, topItems: [] };
+    return { today: EMPTY_DAY, yesterday: EMPTY_DAY, thisMonth: EMPTY_DAY, topItems: [] };
   }
 
   const [stats, topItems] = await Promise.all([
@@ -61,6 +70,7 @@ export async function getDashboardAnalyticsAction(): Promise<DashboardAnalytics>
   return {
     today:     stats.today,
     yesterday: stats.yesterday,
+    thisMonth: stats.thisMonth,
     topItems:  topItems.map(item => ({
       itemId:      item.itemId,
       itemName:    item.itemName,

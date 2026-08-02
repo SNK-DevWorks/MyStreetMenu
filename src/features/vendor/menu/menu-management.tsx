@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Plus,
   Search,
@@ -196,7 +197,7 @@ export default function MenuManagement() {
 
   // ——— Handlers ———————————————————————————————————————————————————————————————
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = useCallback(() => {
     setEditingItemId(null);
     setFieldErrors({});
     setBatchFieldErrors({});
@@ -240,7 +241,19 @@ export default function MenuManagement() {
     setPendingItems([initialItem]);
     setActiveIndex(0);
     setIsModalOpen(true);
-  };
+  }, [categories, shop?.id]);
+
+  // ——— Auto-open modal if URL contains action=create / action=add ———————————
+  const searchParams = useSearchParams();
+  const hasAutoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if ((action === 'create' || action === 'add') && !hasAutoOpenedRef.current) {
+      hasAutoOpenedRef.current = true;
+      handleOpenCreateModal();
+    }
+  }, [searchParams, handleOpenCreateModal]);
 
   const handleEditItem = (cardItem: FoodCardItem) => {
     const dbItem = dbItems.find((i) => i.id === cardItem.id);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useVendor } from '@/context/vendor-context';
 import { getDashboardAnalyticsAction, type DashboardAnalytics } from '@/actions/analytics/get-dashboard-analytics';
@@ -20,7 +21,7 @@ function getDelta(today: number, yesterday: number): { value: number; positive: 
 
 function DeltaBadge({ today, yesterday }: { today: number; yesterday: number }) {
   const { value, positive, zero } = getDelta(today, yesterday);
-  if (zero) return <span className="flex items-center gap-1 text-xs font-bold text-slate-500"><Minus size={12} /> No change</span>;
+  if (zero) return null;
   return (
     <span className={`flex items-center gap-1 text-xs font-bold ${positive ? 'text-green-600' : 'text-red-500'}`}>
       {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
@@ -72,41 +73,46 @@ export const MenuItemsCard: React.FC<{ count?: number }> = ({ count: initialCoun
 // ─── Menu Views Card ───────────────────────────────────────────────────────────
 
 export const MenuViewsCard: React.FC<{ analytics: DashboardAnalytics | null; loading: boolean }> = ({ analytics, loading }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<'Today' | 'Yesterday'>('Today');
+  const [selectedPeriod, setSelectedPeriod] = useState<'Today' | 'Yesterday' | 'This Month'>('Today');
 
   const todayViews     = analytics?.today.menuViews     ?? 0;
   const yesterdayViews = analytics?.yesterday.menuViews ?? 0;
-  const displayed      = selectedPeriod === 'Today' ? todayViews : yesterdayViews;
+  const monthViews     = analytics?.thisMonth.menuViews ?? 0;
+
+  const displayed =
+    selectedPeriod === 'Today'
+      ? todayViews
+      : selectedPeriod === 'Yesterday'
+      ? yesterdayViews
+      : monthViews;
 
   return (
     <div className="bg-[#FFEAD8] rounded-[2.5rem] relative overflow-hidden shadow-sm hover:shadow-md w-full h-[250px] flex transition-all">
-      {/* Left Content */}
-      <div className="flex-1 p-6 sm:p-7 flex flex-col justify-start z-10">
-        <div>
-          <h3 className="text-[#E05A00] font-black text-xl sm:text-2xl tracking-tight mb-4">Menu Views</h3>
-          <ul className="space-y-3.5 text-slate-800 text-sm sm:text-base font-extrabold">
-            {(['Today', 'Yesterday'] as const).map((date) => (
-              <li
-                key={date}
-                onClick={() => setSelectedPeriod(date)}
-                className={`flex items-center gap-3.5 cursor-pointer py-0.5 transition-colors ${
-                  selectedPeriod === date ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span className={`w-9 h-9 rounded-full transition-all shrink-0 flex items-center justify-center ${
-                  selectedPeriod === date
-                    ? 'bg-[#F77512] shadow-[0_0_16px_rgba(247,117,18,0.6)] scale-105'
-                    : 'bg-slate-300/90 hover:bg-slate-400'
-                }`}>
-                  {selectedPeriod === date && <span className="w-4 h-4 rounded-full bg-white" />}
-                </span>
-                {date}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3">
-            <DeltaBadge today={todayViews} yesterday={yesterdayViews} />
-          </div>
+      {/* Left Content — Centered vertically */}
+      <div className="flex-1 p-6 sm:p-7 flex flex-col justify-center z-10 h-full">
+        <h3 className="text-[#E05A00] font-black text-xl sm:text-2xl tracking-tight mb-3">Menu Views</h3>
+        <ul className="space-y-2.5 text-slate-800 text-sm sm:text-base font-extrabold">
+          {(['Today', 'Yesterday', 'This Month'] as const).map((period) => (
+            <li
+              key={period}
+              onClick={() => setSelectedPeriod(period)}
+              className={`flex items-center gap-3 cursor-pointer py-1 transition-colors ${
+                selectedPeriod === period ? 'text-slate-900 font-black' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all shrink-0 flex items-center justify-center ${
+                selectedPeriod === period
+                  ? 'bg-[#F77512] shadow-[0_0_16px_rgba(247,117,18,0.6)] scale-105'
+                  : 'bg-slate-300/90 hover:bg-slate-400'
+              }`}>
+                {selectedPeriod === period && <span className="w-3.5 h-3.5 rounded-full bg-white" />}
+              </span>
+              {period}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2">
+          <DeltaBadge today={todayViews} yesterday={yesterdayViews} />
         </div>
       </div>
 
@@ -120,7 +126,9 @@ export const MenuViewsCard: React.FC<{ analytics: DashboardAnalytics | null; loa
               {formatCount(displayed)}
             </span>
           )}
-          <span className="text-white/95 text-xs sm:text-sm font-extrabold tracking-wide">Total Views</span>
+          <span className="text-white/95 text-xs sm:text-sm font-extrabold tracking-wide">
+            {selectedPeriod === 'This Month' ? 'Month Views' : 'Total Views'}
+          </span>
         </div>
       </div>
     </div>
@@ -215,9 +223,12 @@ export const MostViewedCard: React.FC<{ analytics: DashboardAnalytics | null; lo
             </ul>
           )}
         </div>
-        <button className="bg-[#12F7E8] hover:bg-[#0BC5B8] transition-colors text-slate-900 text-xs font-black tracking-wide px-5 py-2.5 rounded-full w-max mt-2 shadow-sm cursor-pointer">
+        <Link
+          href="/vendor/menu?tab=preview"
+          className="bg-[#12F7E8] hover:bg-[#0BC5B8] transition-colors text-slate-900 text-xs font-black tracking-wide px-5 py-2.5 rounded-full w-max mt-2 shadow-sm inline-block"
+        >
           View Menu
-        </button>
+        </Link>
       </div>
 
       {/* Right Illustration */}

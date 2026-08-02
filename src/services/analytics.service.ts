@@ -1,5 +1,5 @@
 import { analyticsRepository, type BatchEvent } from '@/repositories';
-import { getDailyShopStats, getShopStatsByDates, getDailyItemStats, getTrendingItems } from '@/queries';
+import { getDailyShopStats, getShopStatsByDates, getShopStatsForMonth, getDailyItemStats, getTrendingItems } from '@/queries';
 import type { NewAnalyticsEvent } from '../../drizzle/schema/analytics-events';
 
 export const analyticsService = {
@@ -28,12 +28,15 @@ export const analyticsService = {
     const today     = new Date().toISOString().slice(0, 10);
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
-    const rows = await getShopStatsByDates(shopId, [today, yesterday]);
+    const [rows, monthRow] = await Promise.all([
+      getShopStatsByDates(shopId, [today, yesterday]),
+      getShopStatsForMonth(shopId),
+    ]);
 
     const todayRow     = rows.find(r => r.date === today);
     const yesterdayRow = rows.find(r => r.date === yesterday);
 
-    const toNum = (v: number | null | undefined) => v ?? 0;
+    const toNum = (v: number | null | undefined) => Number(v ?? 0);
 
     return {
       today: {
@@ -53,6 +56,15 @@ export const analyticsService = {
         likeClicks:      toNum(yesterdayRow?.likeClicks),
         whatsappClicks:  toNum(yesterdayRow?.whatsappClicks),
         directionClicks: toNum(yesterdayRow?.directionClicks),
+      },
+      thisMonth: {
+        menuViews:       toNum(monthRow?.menuViews),
+        uniqueVisitors:  toNum(monthRow?.uniqueVisitors),
+        qrScans:         toNum(monthRow?.qrScans),
+        shareClicks:     toNum(monthRow?.shareClicks),
+        likeClicks:      toNum(monthRow?.likeClicks),
+        whatsappClicks:  toNum(monthRow?.whatsappClicks),
+        directionClicks: toNum(monthRow?.directionClicks),
       },
     };
   },
