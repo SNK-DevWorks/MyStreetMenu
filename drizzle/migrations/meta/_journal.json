@@ -15,6 +15,13 @@
       "when": 1785525169809,
       "tag": "0001_flashy_mulholland_black",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785644000146,
+      "tag": "0002_neat_stick",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,27 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { analyticsService } from '@/services';
 
-// ─── Validation ───────────────────────────────────────────────────────────────
+// ─── Bot Detection ─────────────────────────────────────────────────────────────
+
+const BOT_UA_PATTERNS = [
+  /googlebot/i, /bingbot/i, /facebookexternalhit/i, /slackbot/i,
+  /discordbot/i, /whatsapp/i, /twitterbot/i, /applebot/i,
+  /crawl/i, /spider/i, /bot/i,
+];
+
+function isBotUserAgent(ua: string): boolean {
+  return BOT_UA_PATTERNS.some(p => p.test(ua));
+}
+
+// ─── Event Category Split ──────────────────────────────────────────────────────
+
+/**
+ * Unique Events: one occurrence per visitor per scope per day.
+ * Count Events: every click counts — no dedup at any layer.
+ */
+const UNIQUE_EVENT_TYPES = new Set(['menu_view', 'qr_scan', 'item_view'] as const);
+
+// ─── Validation ────────────────────────────────────────────────────────────────
 
 const analyticsEventTypeValues = [
   'menu_view',
@@ -11,14 +31,17 @@ const analyticsEventTypeValues = [
   'whatsapp_click',
   'direction_click',
   'share_click',
+  'like_click',
 ] as const;
 
 const batchEventSchema = z.object({
-  shopId: z.string().uuid(),
-  eventType: z.enum(analyticsEventTypeValues),
-  sessionId: z.string().optional().nullable(),
+  shopId:     z.string().uuid(),
+  eventType:  z.enum(analyticsEventTypeValues),
+  visitorId:  z.string().optional().nullable(),
+  sessionId:  z.string().optional().nullable(),
+  dedupKey:   z.string().optional().nullable(),
   occurredAt: z.string().datetime().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+  metadata:   z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 const batchRequestSchema = z.object({
@@ -33,17 +56,21 @@ const batchRequestSchema = z.object({
 /**
  * POST /api/analytics/batch
  *
- * Accepts an array of analytics events from the browser and bulk-inserts them
- * in a single SQL INSERT. This keeps analytics decoupled from menu delivery
- * — the menu page never waits for analytics writes.
+ * Accepts batched analytics events from the browser. Performs:
+ *  1. Bot filtering (User-Agent check — silent 200 discard)
+ *  2. Bulk insert into analytics_events
+ *  3. Unique visitor tracking via daily_unique_visitors (INSERT ON CONFLICT DO NOTHING)
+ *  4. Upsert into daily_shop_stats and daily_item_stats aggregate tables
  *
- * Supports both application/json and text/plain (navigator.sendBeacon sends text/plain).
- *
- * Abuse protection:
- *  - Maximum 100 events per request (enforced by Zod before any DB work)
- *  - Maximum 100KB payload (enforced before parsing)
+ * Analytics errors never surface to customers.
  */
 export async function POST(request: NextRequest) {
+  // ── Bot filter — silent 200 (avoid retry storms) ───────────────────────────
+  const ua = request.headers.get('user-agent') ?? '';
+  if (isBotUserAgent(ua)) {
+    return NextResponse.json({ ok: true });
+  }
+
   // ── Payload size guard (100KB) ─────────────────────────────────────────────
   const contentLength = request.headers.get('content-length');
   if (contentLength && parseInt(contentLength, 10) > 100_000) {
@@ -71,24 +98,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { events } = parsed.data;
+  const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD' UTC
 
-  // ── Bulk insert — single DB round-trip ────────────────────────────────────
+  // ── Process — errors must never surface to customers ──────────────────────
   try {
-    await analyticsService.trackBatch(
-      events.map((e) => ({
-        shopId: e.shopId,
-        eventType: e.eventType,
-        sessionId: e.sessionId ?? null,
-        metadata: e.metadata
-          ? { ...e.metadata, occurredAt: e.occurredAt }
-          : e.occurredAt
-            ? { occurredAt: e.occurredAt }
-            : null,
-      })),
-    );
+    await analyticsService.processBatch(events, today);
   } catch (error) {
-    // Analytics errors must never surface to customers
-    console.error('[analytics/batch] Insert failed:', error);
+    console.error('[analytics/batch] Processing failed:', error);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 

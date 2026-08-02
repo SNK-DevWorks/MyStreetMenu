@@ -1,48 +1,82 @@
-import { analyticsRepository } from '@/repositories';
-import { getShopEventCounts, getShopDailyTrend } from '@/queries';
+import { analyticsRepository, type BatchEvent } from '@/repositories';
+import { getDailyShopStats, getShopStatsByDates, getDailyItemStats, getTrendingItems } from '@/queries';
 import type { NewAnalyticsEvent } from '../../drizzle/schema/analytics-events';
 
 export const analyticsService = {
   /**
-   * Track a single analytics event.
+   * Track a single analytics event (server-side only, e.g. from Server Actions).
    */
   async trackEvent(data: Omit<NewAnalyticsEvent, 'id'>) {
     return analyticsRepository.recordEvent(data);
   },
 
   /**
-   * Track many events in one SQL INSERT — used by the batch API endpoint.
-   * Much cheaper than calling trackEvent() N times.
+   * Process a full browser-batched flush:
+   *  - Bulk insert raw events
+   *  - Track unique visitors via daily_unique_visitors junction table
+   *  - Upsert daily_shop_stats and daily_item_stats aggregate counters
    */
-  async trackBatch(events: Omit<NewAnalyticsEvent, 'id'>[]) {
-    return analyticsRepository.recordBatch(events as NewAnalyticsEvent[]);
+  async processBatch(events: BatchEvent[], today: string) {
+    return analyticsRepository.processBatch(events, today);
   },
 
   /**
-   * Get dashboard stats for a shop (aggregated event counts).
+   * Dashboard stats — reads from aggregate tables (single-row reads, instant).
+   * Returns today's and yesterday's stats for delta calculation.
    */
   async getDashboardStats(shopId: string) {
-    const counts = await getShopEventCounts(shopId);
+    const today     = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
-    const statsMap: Record<string, number> = {};
-    for (const row of counts) {
-      statsMap[row.eventType] = row.count;
-    }
+    const rows = await getShopStatsByDates(shopId, [today, yesterday]);
+
+    const todayRow     = rows.find(r => r.date === today);
+    const yesterdayRow = rows.find(r => r.date === yesterday);
+
+    const toNum = (v: number | null | undefined) => v ?? 0;
 
     return {
-      menuViews: statsMap['menu_view'] ?? 0,
-      qrScans: statsMap['qr_scan'] ?? 0,
-      itemViews: statsMap['item_view'] ?? 0,
-      shareClicks: statsMap['share_click'] ?? 0,
-      directionClicks: statsMap['direction_click'] ?? 0,
-      whatsappClicks: statsMap['whatsapp_click'] ?? 0,
+      today: {
+        menuViews:       toNum(todayRow?.menuViews),
+        uniqueVisitors:  toNum(todayRow?.uniqueVisitors),
+        qrScans:         toNum(todayRow?.qrScans),
+        shareClicks:     toNum(todayRow?.shareClicks),
+        likeClicks:      toNum(todayRow?.likeClicks),
+        whatsappClicks:  toNum(todayRow?.whatsappClicks),
+        directionClicks: toNum(todayRow?.directionClicks),
+      },
+      yesterday: {
+        menuViews:       toNum(yesterdayRow?.menuViews),
+        uniqueVisitors:  toNum(yesterdayRow?.uniqueVisitors),
+        qrScans:         toNum(yesterdayRow?.qrScans),
+        shareClicks:     toNum(yesterdayRow?.shareClicks),
+        likeClicks:      toNum(yesterdayRow?.likeClicks),
+        whatsappClicks:  toNum(yesterdayRow?.whatsappClicks),
+        directionClicks: toNum(yesterdayRow?.directionClicks),
+      },
     };
   },
 
   /**
-   * Get daily trend data for charts.
+   * Weekly trend data (last 7 or 30 days) for line charts.
    */
-  async getShopTrend(shopId: string, days: number = 30) {
-    return getShopDailyTrend(shopId, days);
+  async getShopTrend(shopId: string, days: number = 7) {
+    return getDailyShopStats(shopId, days);
+  },
+
+  /**
+   * Per-item stats for today, joined with item names.
+   * Items ordered by computed trend score DESC.
+   */
+  async getItemStats(shopId: string, limit = 20) {
+    const today = new Date().toISOString().slice(0, 10);
+    return getDailyItemStats(shopId, today, limit);
+  },
+
+  /**
+   * Top trending items for today (views×0.5 + likes×3 + shares×4).
+   */
+  async getTrendingItems(shopId: string, limit = 10) {
+    return getTrendingItems(shopId, limit);
   },
 };

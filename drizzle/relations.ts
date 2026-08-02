@@ -6,6 +6,9 @@ import { menuItems } from './schema/menu-items';
 import { promotions } from './schema/promotions';
 import { analyticsEvents } from './schema/analytics-events';
 import { subscriptions } from './schema/subscriptions';
+import { dailyShopStats } from './schema/daily-shop-stats';
+import { dailyItemStats } from './schema/daily-item-stats';
+import { dailyUniqueVisitors } from './schema/daily-unique-visitors';
 
 // ── User Relations ──────────────────────────────────────
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -31,6 +34,8 @@ export const shopsRelations = relations(shops, ({ one, many }) => ({
   promotions: many(promotions),
   analyticsEvents: many(analyticsEvents),
   subscriptions: many(subscriptions),
+  dailyShopStats: many(dailyShopStats),
+  dailyUniqueVisitors: many(dailyUniqueVisitors),
 }));
 
 // ── Category Relations ──────────────────────────────────
@@ -97,3 +102,32 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// ── Daily Shop Stats Relations ──────────────────────────
+export const dailyShopStatsRelations = relations(dailyShopStats, ({ one }) => ({
+  shop: one(shops, {
+    fields: [dailyShopStats.shopId],
+    references: [shops.id],
+  }),
+}));
+
+// ── Daily Item Stats Relations ──────────────────────────
+export const dailyItemStatsRelations = relations(dailyItemStats, ({ one }) => ({
+  shop: one(shops, {
+    fields: [dailyItemStats.shopId],
+    references: [shops.id],
+  }),
+  item: one(menuItems, {
+    fields: [dailyItemStats.itemId],
+    references: [menuItems.id],
+  }),
+}));
+
+// ── Daily Unique Visitors Relations ────────────────────
+export const dailyUniqueVisitorsRelations = relations(dailyUniqueVisitors, ({ one }) => ({
+  shop: one(shops, {
+    fields: [dailyUniqueVisitors.shopId],
+    references: [shops.id],
+  }),
+}));
+

@@ -29,8 +29,22 @@ export default function PublicMenuView({
   const [activeTimeframe, setActiveTimeframe] = useState<TimeframeType>('today');
   const { track } = useAnalytics();
 
-  // Fire menu_view once on mount
+  // Fire menu_view once on mount; also detect QR scan from URL params
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qrId   = params.get('qr');
+
+    if (qrId) {
+      // QR-originated visit — fire qr_scan with structured metadata
+      track('qr_scan', {
+        qrId,
+        source:   params.get('src')      ?? 'direct',
+        tableNo:  params.get('table')    ?? null,
+        campaign: params.get('campaign') ?? null,
+      });
+    }
+
+    // Always fire menu_view (subject to client-side dedup)
     track('menu_view');
   }, [track]);
 

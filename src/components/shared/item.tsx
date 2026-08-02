@@ -79,7 +79,8 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
   const lastTapRef = useRef<number>(0);
 
   const activeTimeframe = props.variant === 'customer' ? props.activeTimeframe : 'today';
-  const currentStats = stats?.[activeTimeframe] ?? { views: 1200, likes: 350 };
+  const currentStats = stats?.[activeTimeframe] ?? { views: 0, likes: 0 };
+  const hasStats = currentStats.views > 0 || currentStats.likes > 0;
 
   const handleDoubleClick = () => { if (props.variant === 'customer') setLiked(true); };
   const handleTouchEnd = () => {
@@ -124,21 +125,33 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
 
           {/* Right: customer → views + like  |  vendor → edit + delete */}
           {props.variant === 'customer' ? (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="bg-black/40 backdrop-blur-md text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full border border-white/20 shadow-sm flex items-center gap-1" title={`${currentStats.views} views`}>
-                <Eye size={12} className="text-cyan-300" />
-                <span>{formatNumber(currentStats.views)}</span>
+            hasStats ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="bg-black/40 backdrop-blur-md text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full border border-white/20 shadow-sm flex items-center gap-1" title={`${currentStats.views} views`}>
+                  <Eye size={12} className="text-cyan-300" />
+                  <span>{formatNumber(currentStats.views)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLiked(v => !v); }}
+                  className="bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 hover:bg-black/60 transition-colors cursor-pointer flex items-center gap-1 text-white text-[11px] font-extrabold"
+                  aria-label="Like item"
+                >
+                  <Heart size={12} className={`transition-colors duration-150 ${liked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
+                  <span>{formatNumber(liked ? currentStats.likes + 1 : currentStats.likes)}</span>
+                </button>
               </div>
+            ) : (
+              /* No real stats yet — show only the like button, no view count */
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setLiked(v => !v); }}
-                className="bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 hover:bg-black/60 transition-colors cursor-pointer flex items-center gap-1 text-white text-[11px] font-extrabold"
+                className="bg-black/40 backdrop-blur-md p-1.5 rounded-full border border-white/20 hover:bg-black/60 transition-colors cursor-pointer"
                 aria-label="Like item"
               >
-                <Heart size={12} className={`transition-colors duration-150 ${liked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
-                <span>{formatNumber(liked ? currentStats.likes + 1 : currentStats.likes)}</span>
+                <Heart size={13} className={`transition-colors duration-150 ${liked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
               </button>
-            </div>
+            )
           ) : (
             <div className="flex items-center gap-1.5 shrink-0">
               {props.onEdit && (

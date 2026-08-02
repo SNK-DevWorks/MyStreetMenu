@@ -4,5 +4,8 @@ export * from './schema/categories';
 export * from './schema/menu-items';
 export * from './schema/promotions';
 export * from './schema/analytics-events';
+export * from './schema/daily-shop-stats';
+export * from './schema/daily-item-stats';
+export * from './schema/daily-unique-visitors';
 export * from './schema/subscriptions';
 export * from './relations';
