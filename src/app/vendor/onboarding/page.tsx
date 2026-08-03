@@ -1,16 +1,39 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Check, ChevronLeft, ChevronRight, Loader2, MapPin, ExternalLink, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Check, ChevronRight, Loader2, MapPin, ExternalLink, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { completeOnboardingAction } from '@/actions/auth/complete-onboarding';
+
+// ─── Session Storage Key ──────────────────────────────────────────────────────
+const STORAGE_KEY = 'msm_onboarding_draft';
+
+// ─── Google Maps URL validator ────────────────────────────────────────────────
+function isGoogleMapsUrl(value: string): boolean {
+  return /^https?:\/\/(maps\.google\.|google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(value.trim());
+}
+
+function validateLocation(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Location is required.';
+
+  const isUrl = /^https?:\/\//i.test(trimmed);
+  if (isUrl && !isGoogleMapsUrl(trimmed)) {
+    return 'Please paste a valid Google Maps link (e.g. maps.app.goo.gl/...) or type a plain address.';
+  }
+  if (!isUrl && trimmed.length < 5) {
+    return 'Address is too short. Please enter a full address or paste a Google Maps link.';
+  }
+  return null; // valid
+}
 
 export default function VendorOnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const totalSteps = 4;
 
   const [formData, setFormData] = useState({
@@ -23,6 +46,7 @@ export default function VendorOnboardingPage() {
 
   const supabase = createClient();
 
+  // ── Restore draft from sessionStorage (industry-standard "form persistence") ──
   useEffect(() => {
     const getUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -35,12 +59,36 @@ export default function VendorOnboardingPage() {
         user.user_metadata?.onboarding_completed ||
         (user.user_metadata?.shop_name && user.user_metadata?.phone)
       );
-
       if (isOnboarded) {
         router.replace('/vendor/dashboard');
         return;
       }
 
+      // Try to restore a saved draft (user may have left to open Google Maps)
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const { formData: savedForm, step: savedStep } = JSON.parse(saved);
+          if (savedForm) {
+            setFormData((prev) => ({
+              ...prev,
+              shopName: savedForm.shopName || user.user_metadata?.shop_name || user.user_metadata?.name || '',
+              phone: savedForm.phone || user.user_metadata?.phone || '',
+              whatsapp: savedForm.whatsapp || '',
+              category: savedForm.category || '',
+              location: savedForm.location || user.user_metadata?.location || '',
+            }));
+            if (savedStep && savedStep >= 1 && savedStep <= 4) {
+              setStep(savedStep);
+            }
+            return;
+          }
+        }
+      } catch {
+        // ignore sessionStorage errors (private browsing etc.)
+      }
+
+      // No draft — seed from auth metadata
       setFormData((prev) => ({
         ...prev,
         shopName: user.user_metadata?.shop_name || user.user_metadata?.name || '',
@@ -51,25 +99,76 @@ export default function VendorOnboardingPage() {
     getUserData();
   }, [supabase.auth, router]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  // ── Persist draft to sessionStorage on every change ────────────────────────
+  const persistDraft = useCallback((data: typeof formData, currentStep: number) => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ formData: data, step: currentStep }));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const updated = { ...formData, [name]: value };
+    setFormData(updated);
+    persistDraft(updated, step);
+
+    // Clear location error as user types
+    if (name === 'location') {
+      setLocationError(null);
+    }
   };
 
-  // Handles moving to the next step
   const nextStep = () => {
-    if (step < totalSteps) setStep(step + 1);
+    if (step < totalSteps) {
+      const newStep = step + 1;
+      setStep(newStep);
+      persistDraft(formData, newStep);
+    }
   };
 
-  // Handles moving to the previous step
   const prevStep = () => {
-    if (step > 1) setStep(step - 1);
+    if (step > 1) {
+      const newStep = step - 1;
+      setStep(newStep);
+      persistDraft(formData, newStep);
+    }
   };
 
-  // Submits all onboarding data to the server, creating DB rows for user + shop
+  // ── Step 2 form submit — validate location before advancing ──────────────────
+  const handleStep2Submit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate Google Maps link or address
+    const locErr = validateLocation(formData.location);
+    if (locErr) {
+      setLocationError(locErr);
+      return;
+    }
+    setLocationError(null);
+    nextStep();
+  };
+
+  // ── Open Google Maps — save draft first so state survives navigation ─────────
+  const handleOpenGoogleMaps = () => {
+    persistDraft(formData, step);
+    // Force open in new tab — safest approach
+    window.open('https://maps.google.com', '_blank', 'noopener,noreferrer');
+  };
+
+  // ── Final submit ─────────────────────────────────────────────────────────────
   const finishOnboarding = async () => {
+    // Final guard: ensure required fields are present
+    if (!formData.shopName.trim()) {
+      setErrorMsg('Shop name is required. Please go back and fill it in.');
+      return;
+    }
+    if (!formData.phone.trim()) {
+      setErrorMsg('Phone number is required. Please go back and fill it in.');
+      return;
+    }
+
     setIsLoading(true);
     setErrorMsg(null);
     try {
@@ -87,7 +186,9 @@ export default function VendorOnboardingPage() {
         return;
       }
 
-      // All DB writes succeeded — navigate to dashboard
+      // Clear the saved draft — onboarding complete
+      try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+
       router.push('/vendor/dashboard');
     } catch (err) {
       console.error('Onboarding error:', err);
@@ -96,17 +197,14 @@ export default function VendorOnboardingPage() {
     }
   };
 
-  // We use a small style block for keyframes that are complex to write purely in inline utility classes
   const customStyles = `
     .step-enter {
       animation: slideInRight 0.4s ease-out forwards;
     }
-    
     @keyframes slideInRight {
       from { opacity: 0; transform: translateX(20px); }
       to { opacity: 1; transform: translateX(0); }
     }
-
     .card-shadow {
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
     }
@@ -116,16 +214,13 @@ export default function VendorOnboardingPage() {
     <div className="min-h-screen bg-[#FCF9F6] flex items-center justify-center font-sans text-gray-800 p-4">
       <style>{customStyles}</style>
 
-      {/* Main Container */}
       <div className="w-full max-w-2xl bg-white rounded-3xl p-8 md:p-12 card-shadow relative overflow-hidden">
-        {/* Header / Logo Area */}
+        {/* Header / Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/text-logo.png" alt="MyStreetMenu" className="h-9 w-auto object-contain mx-auto" />
           </div>
-
-          {/* Progress Indicator */}
           <div className="flex justify-center items-center space-x-2 mt-6">
             {[1, 2, 3, 4].map((i) => (
               <div
@@ -145,7 +240,7 @@ export default function VendorOnboardingPage() {
               Welcome to MyStreetMenu
             </h1>
             <p className="text-gray-500 mb-8 leading-relaxed max-w-md mx-auto">
-              Let's set up your digital menu in just a couple of steps.
+              Let&apos;s set up your digital menu in just a couple of steps.
             </p>
             <button
               onClick={nextStep}
@@ -163,13 +258,7 @@ export default function VendorOnboardingPage() {
               Tell us about your shop
             </h2>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                nextStep();
-              }}
-              className="space-y-4 max-w-md mx-auto"
-            >
+            <form onSubmit={handleStep2Submit} className="space-y-4 max-w-md mx-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Shop Name *
@@ -227,22 +316,38 @@ export default function VendorOnboardingPage() {
                     onChange={handleChange}
                     required
                     placeholder="Paste Google Maps link or enter address..."
-                    className="w-full px-4 py-3 pr-32 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all placeholder-gray-400 text-gray-900"
+                    className={`w-full px-4 py-3 pr-36 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all placeholder-gray-400 text-gray-900 ${
+                      locationError ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                    }`}
                   />
-                  <a
-                    href="https://maps.google.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute right-2 px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors border border-orange-200/60 cursor-pointer"
+                  {/* Open Google Maps button — saves draft before leaving */}
+                  <button
+                    type="button"
+                    onClick={handleOpenGoogleMaps}
+                    className="absolute right-2 px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors border border-orange-200/60 cursor-pointer shrink-0"
                   >
                     <MapPin className="w-3.5 h-3.5 text-orange-500" />
                     <span>Google Maps</span>
                     <ExternalLink className="w-3 h-3 text-orange-500" />
-                  </a>
+                  </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Click 'Google Maps' to find your shop, then copy & paste the link or address here.
-                </p>
+
+                {/* Location validation error */}
+                {locationError && (
+                  <div className="mt-1.5 flex items-start gap-1.5 text-red-600 text-xs">
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>{locationError}</span>
+                  </div>
+                )}
+
+                {/* Helper hint */}
+                {!locationError && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {isGoogleMapsUrl(formData.location)
+                      ? '✅ Google Maps link detected — we\'ll extract your address automatically.'
+                      : 'Click \'Google Maps\' to find your shop, copy the link, then come back and paste it here.'}
+                  </p>
+                )}
               </div>
 
               <div className="pt-4">
@@ -265,16 +370,13 @@ export default function VendorOnboardingPage() {
             </h2>
 
             <div className="max-w-sm mx-auto bg-white border-2 border-orange-500 rounded-3xl p-8 text-left relative shadow-lg mb-8">
-              {/* Badge */}
               <div className="absolute -top-3.5 right-6 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                 Recommended
               </div>
 
               <h3 className="text-xl font-bold text-gray-900 mb-2">Starter</h3>
               <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-extrabold text-gray-900">
-                  ₹59
-                </span>
+                <span className="text-4xl font-extrabold text-gray-900">₹59</span>
                 <span className="text-gray-500 ml-1 font-medium">/month</span>
               </div>
               <p className="text-orange-500 font-semibold text-sm mb-6 pb-6 border-b border-gray-100">
@@ -282,33 +384,15 @@ export default function VendorOnboardingPage() {
               </p>
 
               <p className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">
-                What's included?
+                What&apos;s included?
               </p>
               <ul className="space-y-4 mb-8">
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-orange-500 mr-3 shrink-0" />
-                  <span className="text-gray-700 font-medium text-sm">
-                    Digital QR Menu
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-orange-500 mr-3 shrink-0" />
-                  <span className="text-gray-700 font-medium text-sm">
-                    Unlimited Menu Items
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-orange-500 mr-3 shrink-0" />
-                  <span className="text-gray-700 font-medium text-sm">
-                    Promotions & Offers
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-orange-500 mr-3 shrink-0" />
-                  <span className="text-gray-700 font-medium text-sm">
-                    Basic Analytics
-                  </span>
-                </li>
+                {['Digital QR Menu', 'Unlimited Menu Items', 'Promotions & Offers', 'Basic Analytics'].map((f) => (
+                  <li key={f} className="flex items-center">
+                    <Check className="h-5 w-5 text-orange-500 mr-3 shrink-0" />
+                    <span className="text-gray-700 font-medium text-sm">{f}</span>
+                  </li>
+                ))}
               </ul>
 
               <button
@@ -335,16 +419,13 @@ export default function VendorOnboardingPage() {
         {step === 4 && (
           <div className="step-enter text-center">
             <div className="relative mx-auto w-32 h-32 mb-6 mt-4">
-              {/* Abstract celebratory shape with rotating animation */}
               <div className="absolute inset-0 bg-[#E8F0FE] rounded-[40%_60%_70%_30%/40%_50%_60%_50%] animate-[spin_10s_linear_infinite]"></div>
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <span className="text-5xl">🚀</span>
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold mb-4 text-gray-900">
-              You're all set!
-            </h2>
+            <h2 className="text-3xl font-bold mb-4 text-gray-900">You&apos;re all set!</h2>
             <p className="text-gray-500 mb-10 text-lg max-w-md mx-auto">
               Your 30-day free trial is now active.
             </p>
@@ -364,7 +445,6 @@ export default function VendorOnboardingPage() {
               )}
             </button>
 
-            {/* Error feedback */}
             {errorMsg && (
               <div className="mt-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm max-w-md mx-auto text-left">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />

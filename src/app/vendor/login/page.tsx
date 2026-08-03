@@ -59,6 +59,45 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   const [errorMsg, setErrorMsg] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  // Helper: translate raw Supabase error messages into friendly user text
+  const translateAuthError = (raw: string): string => {
+    const m = raw.toLowerCase();
+    if (m.includes("already registered") || m.includes("already in use") || m.includes("already exists") || m.includes("user_already_exists")) {
+      return "An account with this email already exists. Please sign in instead.";
+    }
+    if (m.includes("invalid login credentials") || m.includes("invalid credentials")) {
+      return "Incorrect email or password. Please try again.";
+    }
+    if (m.includes("email not confirmed")) {
+      return "Please confirm your email first. Check your inbox for the confirmation link.";
+    }
+    if (m.includes("rate limit") || m.includes("too many requests") || m.includes("security purposes") || m.includes("email rate limit")) {
+      // Extract seconds if present, e.g. "you can only request this after 54 seconds"
+      const secondsMatch = raw.match(/(\d+)\s*second/i);
+      if (secondsMatch) {
+        return `Too many attempts. Please wait ${secondsMatch[1]} seconds and try again.`;
+      }
+      return "Too many attempts. Please wait a moment and try again.";
+    }
+    if (m.includes("invalid format") || m.includes("unable to validate email")) {
+      return "Please enter a valid email address.";
+    }
+    if (m.includes("password should be at least") || m.includes("password must be at least") || m.includes("requires a valid password")) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (m.includes("weak password")) {
+      return "Your password is too weak. Please choose a stronger password (min. 6 characters).";
+    }
+    if (m.includes("signup is disabled")) {
+      return "New signups are temporarily disabled. Please try again later.";
+    }
+    if (m.includes("network") || m.includes("fetch") || m.includes("failed to fetch")) {
+      return "Network error. Please check your internet connection and try again.";
+    }
+    // Fallback: return the raw message but capitalised cleanly
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  };
+
   // Helper to determine destination path based on vendor onboarding status
   const getDestinationUrl = (user: any) => {
     const nextParam = searchParams.get("next");
@@ -73,12 +112,21 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   };
 
   // Check initial session on mount: if user is already logged in, redirect to destination
+  // Also read ?error=auth_failed from the callback route and show a friendly message
   useEffect(() => {
     const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const dest = getDestinationUrl(session.user);
         router.replace(dest);
+        return;
+      }
+      // Show friendly message if redirected back from a failed auth callback
+      const errorParam = searchParams.get('error');
+      if (errorParam === 'auth_failed') {
+        setErrorMsg('Your confirmation link has expired or is invalid. Please sign up again or request a new link.');
+        // Clean the param from URL without reload
+        window.history.replaceState(null, '', '/vendor/login');
       }
     };
     checkInitialSession();
@@ -126,7 +174,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        setErrorMsg(translateAuthError(error.message));
         setIsLoading(false);
         return;
       }
@@ -135,10 +183,6 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
         sessionStorage.removeItem('msm_welcome_seen');
       }
       const dest = getDestinationUrl(authData?.user);
-      // router.push (not replace) keeps /vendor/login in the history stack.
-      // When the user presses Back, the proxy sees an authenticated user on
-      // /vendor/login (an auth page) and redirects them to /vendor/dashboard
-      // — so they effectively cannot leave the dashboard with the Back button.
       router.push(dest);
       router.refresh();
     } else {
@@ -158,7 +202,14 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        setErrorMsg(translateAuthError(error.message));
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if Supabase returned a user with empty identities (indicates email already exists)
+      if (data?.user && data.user.identities && data.user.identities.length === 0) {
+        setErrorMsg("An account with this email already exists. Please switch to Log In.");
         setIsLoading(false);
         return;
       }
