@@ -119,7 +119,7 @@ export default function HomePage() {
           <div className="absolute -right-8 lg:-right-12 top-1/2 -translate-y-1/2 w-[420px] h-[420px] md:w-[520px] md:h-[520px] lg:w-[620px] lg:h-[620px] xl:w-[680px] xl:h-[680px] bg-gradient-to-tr from-[#ffe5d9] to-[#fff5f0] rounded-full -z-10 hidden lg:block"></div>
 
           <img
-            src="https://res.cloudinary.com/dfledgwk1/image/upload/v1785408237/Untitled_-_30_July_2026_at_11.16.23_anvkkz.png"
+            src="https://res.cloudinary.com/dfledgwk1/image/upload/v1785741599/roothero_szkc68.png"
             alt="MyStreetMenu App Presentation"
             className="w-full max-w-[850px] lg:max-w-none lg:w-[125%] max-h-full h-auto object-contain drop-shadow-2xl translate-x-0 lg:translate-x-16 xl:translate-x-24 lg:scale-110 transition-transform duration-300"
             referrerPolicy="no-referrer"

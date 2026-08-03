@@ -46,7 +46,7 @@ export const Card: React.FC<CardProps> = ({
         <div className="absolute top-[-55px] bottom-0 left-0 right-0 rounded-b-[24px] overflow-hidden pointer-events-none select-none">
           <div className="absolute right-2 sm:right-6 md:right-10 bottom-0 flex items-end justify-center md:justify-end">
             <img
-              src="https://res.cloudinary.com/dfledgwk1/image/upload/v1784795987/Adobe_Express_Photo_project_-_23_July_2026_at_14.03.16_tiot75.png"
+              src="https://res.cloudinary.com/dfledgwk1/image/upload/v1785741508/wel-chef_sohzr4.png"
               alt="Welcome Illustration"
               className="h-[220px] sm:h-[250px] md:h-[280px] lg:h-[300px] w-auto object-contain object-bottom"
               referrerPolicy="no-referrer"

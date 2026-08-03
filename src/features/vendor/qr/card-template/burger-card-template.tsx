@@ -5,7 +5,7 @@ import { Share2, Download, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export const BURGER_TEMPLATE_URL =
-  'https://res.cloudinary.com/dfledgwk1/image/upload/v1784898180/qr1_dnr9ca.png';
+  'https://res.cloudinary.com/dfledgwk1/image/upload/v1785741942/qr-temp-1_ajxuz5.png';
 
 // ─── QR Modules Generator ──────────────────────────────────────────────────
 
