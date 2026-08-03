@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Play, Sparkles, ArrowRight, ChevronRight, Star } from "lucide-react";
 
+
 export default function HomePage() {
   return (
     <div className="min-h-screen lg:h-screen w-full bg-[#fafafa] font-sans overflow-x-hidden lg:overflow-hidden flex flex-col justify-between">

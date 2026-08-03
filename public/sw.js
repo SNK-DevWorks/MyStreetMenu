@@ -1,12 +1,13 @@
 // MyStreetMenu Service Worker
 // Provides offline capability, background sync, and caching for vendor dashboard PWA
 
-const CACHE_NAME = 'mystreetmenu-v1';
-const STATIC_CACHE = 'msm-static-v1';
-const DYNAMIC_CACHE = 'msm-dynamic-v1';
+const CACHE_NAME = 'mystreetmenu-v2';
+const STATIC_CACHE = 'msm-static-v2';
+const DYNAMIC_CACHE = 'msm-dynamic-v2';
 
 // Pages to pre-cache for offline access
 const PRECACHE_URLS = [
+  '/',
   '/vendor/dashboard',
   '/vendor/menu',
   '/vendor/promotions',
@@ -103,8 +104,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML pages (vendor dashboard routes): network first, fallback cache
-  if (url.pathname.startsWith('/vendor/') || url.pathname === '/') {
+  // HTML pages (root page, vendor dashboard, public menus): network first, fallback cache
+  if (request.mode === 'navigate' || url.pathname.startsWith('/vendor/') || url.pathname.startsWith('/menu/') || url.pathname === '/') {
     event.respondWith(
       fetch(request)
         .then((response) => {

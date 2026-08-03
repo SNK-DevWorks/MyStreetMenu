@@ -2,8 +2,8 @@
   "name": "MyStreetMenu",
   "short_name": "StreetMenu",
   "description": "Digital Menu Platform for Restaurants & Street Food Vendors",
-  "start_url": "/vendor/dashboard",
-  "scope": "/vendor/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
@@ -71,6 +71,13 @@
     }
   ],
   "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "description": "Go to Home page",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
