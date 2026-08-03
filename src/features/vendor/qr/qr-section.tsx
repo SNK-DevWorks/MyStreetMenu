@@ -23,7 +23,7 @@ function QrContent() {
 
   return (
     <div
-      className="w-full flex flex-col items-start md:ml-28 lg:ml-44 justify-start py-2 mt-1 min-h-[calc(100vh-200px)]"
+      className="w-full flex flex-col items-center md:items-start md:ml-28 lg:ml-44 justify-start py-2 mt-1 min-h-[calc(100vh-200px)]"
       style={{ animation: 'qrFadeIn .2s ease both' }}
     >
       {tab === 'poster' ? (

@@ -233,35 +233,29 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }}
     >
-      {/* Back to Home Button */}
+      {/* Top-Left Brand Text Logo Link to Home */}
       <Link
         href="/"
-        className="fixed top-4 left-4 sm:top-6 sm:left-6 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 backdrop-blur-md border border-[#FF5A00]/10 shadow-sm text-[#1D1D1F] hover:text-[#FF5A00] text-sm font-semibold transition-all hover:scale-105"
+        className="fixed top-4 left-4 sm:top-6 sm:left-8 z-30 flex items-center transition-transform hover:scale-105"
       >
-        <ArrowLeft size={16} strokeWidth={2.5} />
-        Back to Home
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/text-logo.png" alt="MyStreetMenu" className="h-8 sm:h-10 w-auto object-contain drop-shadow-xs" />
       </Link>
 
       {/* Main Card Container */}
-      <div className="w-full max-w-[1040px] bg-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(255,90,0,0.05)] flex flex-col md:flex-row overflow-hidden min-h-[640px] my-auto">
+      <div className="w-full max-w-[440px] md:max-w-[1040px] bg-white rounded-3xl md:rounded-[2.5rem] shadow-[0_12px_36px_rgba(255,90,0,0.06)] md:shadow-[0_20px_40px_rgba(255,90,0,0.05)] flex flex-col md:flex-row overflow-hidden min-h-0 md:min-h-[640px] my-auto">
 
         {/* Left Side: Form Area */}
-        <div className="w-full md:w-[45%] p-8 sm:p-10 md:p-14 flex flex-col justify-center relative z-10 bg-white">
-
-          {/* Logo Area */}
-          <Link href="/" className="flex items-center mb-8 md:mb-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/text-logo.png" alt="MyStreetMenu" className="h-9 w-auto object-contain" />
-          </Link>
+        <div className="w-full md:w-[45%] p-5 sm:p-8 md:p-14 flex flex-col justify-center relative z-10 bg-white">
 
           {/* ═══════════ CONFIRM EMAIL SCREEN (APPLE STYLE) ═══════════ */}
           {showConfirmScreen ? (
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               <div>
-                <h1 className="text-[32px] sm:text-[36px] leading-tight font-bold text-[#1D1D1F] tracking-tight mb-3">
+                <h1 className="text-[26px] sm:text-[36px] leading-tight font-bold text-[#1D1D1F] tracking-tight mb-2.5">
                   Check your email.
                 </h1>
-                <p className="text-[#86868B] text-[16px] leading-relaxed">
+                <p className="text-[#86868B] text-[14px] sm:text-[16px] leading-relaxed">
                   We sent a confirmation link to{" "}
                   <span className="font-semibold text-[#1D1D1F]">{email}</span>. Click the link to complete setting up your account.
                 </p>
@@ -269,18 +263,18 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
 
               {/* Error Alert */}
               {errorMsg && (
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-200/80 text-red-600 text-[14px] font-medium leading-relaxed">
+                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-200/80 text-red-600 text-[13px] sm:text-[14px] font-medium leading-relaxed">
                   {errorMsg}
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="pt-4 space-y-4">
+              <div className="pt-3 sm:pt-4 space-y-3 sm:space-y-4">
                 <button
                   type="button"
                   onClick={handleResendConfirmLink}
                   disabled={isLoading}
-                  className="w-full bg-[#FF5A00] hover:bg-[#E65100] active:scale-[0.98] text-white py-4 rounded-2xl text-[17px] font-semibold transition-all duration-200 shadow-md shadow-[#FF5A00]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                  className="w-full bg-[#FF5A00] hover:bg-[#E65100] active:scale-[0.98] text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[15px] sm:text-[17px] font-semibold transition-all duration-200 shadow-md shadow-[#FF5A00]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -293,7 +287,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                   <button
                     type="button"
                     onClick={() => setShowConfirmScreen(false)}
-                    className="text-[#86868B] hover:text-[#1D1D1F] font-medium transition-colors cursor-pointer text-[15px]"
+                    className="text-[#86868B] hover:text-[#1D1D1F] font-medium transition-colors cursor-pointer text-[14px] sm:text-[15px]"
                   >
                     Back to Sign In
                   </button>
@@ -304,26 +298,26 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
             /* ═══════════ MAIN LOGIN / SIGNUP SCREEN ═══════════ */
             <>
               {/* Header */}
-              <h1 className="text-[32px] sm:text-[40px] leading-tight font-bold text-[#1D1D1F] tracking-tight mb-2">
+              <h1 className="text-[26px] sm:text-[36px] md:text-[40px] leading-tight font-bold text-[#1D1D1F] tracking-tight mb-1.5">
                 {isLogin ? "Sign In" : "Create Account"}
               </h1>
-              <p className="text-[#86868B] text-[15px] sm:text-[17px] mb-8">
+              <p className="text-[#86868B] text-[14px] sm:text-[16px] md:text-[17px] mb-5 sm:mb-8">
                 {isLogin
                   ? "Welcome back to MyStreetMenu."
-                  : "Join to discover delicious street food near you."}
+                  : "Welcome to MyStreetMenu."}
               </p>
 
               {/* Error Alert */}
               {errorMsg && (
-                <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200/80 text-red-600 text-[14px] font-medium leading-relaxed">
+                <div className="mb-4 sm:mb-6 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-200/80 text-red-600 text-[13px] sm:text-[14px] font-medium leading-relaxed">
                   {errorMsg}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 {/* First Name & Last Name (Signup mode only) */}
                 {!isLogin && (
-                  <div className="flex gap-3 sm:gap-4">
+                  <div className="flex gap-2.5 sm:gap-4">
                     <input
                       type="text"
                       name="firstName"
@@ -331,7 +325,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="First Name"
                       required
-                      className="w-1/2 p-4 rounded-2xl bg-[#F5F5F7] border border-transparent text-[16px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B]"
+                      className="w-1/2 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-transparent text-[15px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B]"
                     />
                     <input
                       type="text"
@@ -340,7 +334,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Last Name"
                       required
-                      className="w-1/2 p-4 rounded-2xl bg-[#F5F5F7] border border-transparent text-[16px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B]"
+                      className="w-1/2 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-transparent text-[15px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B]"
                     />
                   </div>
                 )}
@@ -354,7 +348,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                   placeholder="Email"
                   required
                   suppressHydrationWarning
-                  className="w-full p-4 rounded-2xl bg-[#F5F5F7] border border-transparent text-[16px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B]"
+                  className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-transparent text-[15px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B]"
                 />
 
                 {/* Password */}
@@ -367,24 +361,24 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                     placeholder="Password"
                     required
                     minLength={6}
-                    className="w-full p-4 rounded-2xl bg-[#F5F5F7] border border-transparent text-[16px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B] pr-12"
+                    className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-transparent text-[15px] sm:text-[17px] text-[#1D1D1F] focus:outline-none focus:border-[#FF5A00] focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 transition-all duration-300 placeholder-[#86868B] pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#86868B] hover:text-[#FF5A00] transition-colors focus:outline-none p-1"
+                    className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-[#86868B] hover:text-[#FF5A00] transition-colors focus:outline-none p-1"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
 
                 {/* Forgot Password Link for Login */}
                 {isLogin && (
-                  <div className="flex justify-end pt-1">
+                  <div className="flex justify-end pt-0.5">
                     <Link
                       href="/forgot-password"
-                      className="text-[14px] font-medium text-[#FF5A00] hover:underline"
+                      className="text-[13px] sm:text-[14px] font-medium text-[#FF5A00] hover:underline"
                     >
                       Forgot password?
                     </Link>
@@ -392,11 +386,11 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                 )}
 
                 {/* Submit Button */}
-                <div className="pt-2">
+                <div className="pt-1 sm:pt-2">
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-[#FF5A00] hover:bg-[#E65100] active:scale-[0.98] text-white py-4 rounded-2xl text-[17px] font-semibold transition-all duration-200 shadow-md shadow-[#FF5A00]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                    className="w-full bg-[#FF5A00] hover:bg-[#E65100] active:scale-[0.98] text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[15px] sm:text-[17px] font-semibold transition-all duration-200 shadow-md shadow-[#FF5A00]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
                   >
                     {isLoading ? (
                       <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -409,12 +403,12 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                 </div>
 
                 {/* Google Sign-In Button */}
-                <div className="pt-1">
+                <div className="pt-0.5 sm:pt-1">
                   <button
                     type="button"
                     onClick={handleGoogleAuth}
                     disabled={isGoogleLoading}
-                    className="w-full bg-[#F5F5F7] hover:bg-[#EAEAEA] active:scale-[0.98] text-[#1D1D1F] py-3.5 rounded-2xl text-[15px] font-semibold transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer border border-transparent hover:border-gray-300 disabled:opacity-75"
+                    className="w-full bg-[#F5F5F7] hover:bg-[#EAEAEA] active:scale-[0.98] text-[#1D1D1F] py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-[14px] sm:text-[15px] font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 sm:gap-3 cursor-pointer border border-transparent hover:border-gray-300 disabled:opacity-75"
                   >
                     {isGoogleLoading ? (
                       <span className="w-5 h-5 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
@@ -428,7 +422,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
                 </div>
 
                 {/* Terms & Privacy */}
-                <p className="text-[13px] text-[#86868B] mt-4 text-center leading-relaxed">
+                <p className="text-[12px] sm:text-[13px] text-[#86868B] mt-3 sm:mt-4 text-center leading-relaxed">
                   By proceeding, you agree to our{" "}
                   <a href="#" className="text-[#FF5A00] hover:underline">
                     Terms of Service
@@ -442,8 +436,8 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
               </form>
 
               {/* Minimalist Toggle */}
-              <div className="mt-8 pt-4 text-center">
-                <p className="text-[15px] text-[#86868B]">
+              <div className="mt-5 sm:mt-8 pt-2 sm:pt-4 text-center">
+                <p className="text-[14px] sm:text-[15px] text-[#86868B]">
                   {isLogin ? "Don't have an account? " : "Already have an account? "}
                   <button
                     type="button"
@@ -458,8 +452,8 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
           )}
         </div>
 
-        {/* Right Side: Image Area */}
-        <div className="w-full md:w-[55%] relative h-[260px] md:h-auto min-h-[300px] md:min-h-full overflow-hidden bg-[#F5F5F7]">
+        {/* Right Side: Image Area (Hidden on mobile) */}
+        <div className="hidden md:block md:w-[55%] relative min-h-full overflow-hidden bg-[#F5F5F7]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=2071&auto=format&fit=crop"

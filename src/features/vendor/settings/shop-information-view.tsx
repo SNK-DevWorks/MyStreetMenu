@@ -108,26 +108,26 @@ export const ShopInformationView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative bg-white">
-      <div className="max-w-2xl mx-auto space-y-7">
+    <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-8 custom-scrollbar relative bg-white">
+      <div className="max-w-2xl mx-auto space-y-4 sm:space-y-7">
 
         {/* Images Section */}
-        <div className="space-y-4">
-          <h3 className="text-[16px] font-bold text-[#1a1a1a]">Shop Assets</h3>
-          <div className="flex gap-6 items-end">
+        <div className="space-y-3 sm:space-y-4">
+          <h3 className="text-sm sm:text-[16px] font-bold text-[#1a1a1a]">Shop Assets</h3>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-center sm:items-end">
             {/* Logo Upload */}
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-[#fdf8f3] cursor-pointer hover:bg-[#f8f0e5] transition-colors relative overflow-hidden group">
-                <Camera size={24} className="text-gray-400 group-hover:text-[#f67412] transition-colors" />
-                <span className="text-[10px] text-gray-500 mt-1 font-medium group-hover:text-[#f67412]">Logo</span>
+            <div className="flex flex-col items-center gap-1.5 shrink-0">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-[#fdf8f3] cursor-pointer hover:bg-[#f8f0e5] transition-colors relative overflow-hidden group">
+                <Camera size={20} className="text-gray-400 group-hover:text-[#f67412] transition-colors sm:w-6 sm:h-6" />
+                <span className="text-[10px] text-gray-500 mt-0.5 font-medium group-hover:text-[#f67412]">Logo</span>
               </div>
             </div>
 
             {/* Cover Upload */}
-            <div className="flex-1">
-              <div className="h-32 w-full rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-[#fdf8f3] cursor-pointer hover:bg-[#f8f0e5] transition-colors group">
-                <ImagePlus size={28} className="text-gray-400 group-hover:text-[#f67412] transition-colors" />
-                <span className="text-[13px] text-gray-500 mt-2 font-medium group-hover:text-[#f67412]">
+            <div className="w-full sm:flex-1">
+              <div className="h-24 sm:h-32 w-full rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-[#fdf8f3] cursor-pointer hover:bg-[#f8f0e5] transition-colors group">
+                <ImagePlus size={24} className="text-gray-400 group-hover:text-[#f67412] transition-colors sm:w-7 sm:h-7" />
+                <span className="text-xs sm:text-[13px] text-gray-500 mt-1.5 font-medium group-hover:text-[#f67412]">
                   Upload Cover Image
                 </span>
               </div>
@@ -138,37 +138,37 @@ export const ShopInformationView: React.FC = () => {
         <hr className="border-gray-100" />
 
         {/* Form Fields Section */}
-        <div className="space-y-5">
-          <h3 className="text-[16px] font-bold text-[#1a1a1a]">Basic Details</h3>
+        <div className="space-y-3.5 sm:space-y-5">
+          <h3 className="text-sm sm:text-[16px] font-bold text-[#1a1a1a]">Basic Details</h3>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-gray-700">Shop Name</label>
+          <div className="flex flex-col gap-1 sm:gap-1.5">
+            <label className="text-xs sm:text-[13px] font-semibold text-gray-700">Shop Name</label>
             <input
               type="text"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-800 text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white"
+              className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-gray-200 text-gray-800 text-xs sm:text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white"
               placeholder="Enter your shop's full name"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-gray-700">Description</label>
+          <div className="flex flex-col gap-1 sm:gap-1.5">
+            <label className="text-xs sm:text-[13px] font-semibold text-gray-700">Description</label>
             <textarea
-              rows={3}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-800 text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white resize-none"
+              className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-gray-200 text-gray-800 text-xs sm:text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white resize-none"
               placeholder="What is your shop known for?"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-gray-700">Food Type</label>
+          <div className="flex flex-col gap-1 sm:gap-1.5">
+            <label className="text-xs sm:text-[13px] font-semibold text-gray-700">Food Type</label>
             <select
               value={foodType}
               onChange={(e) => setFoodType(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-800 text-[14px] focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white appearance-none cursor-pointer"
+              className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-gray-200 text-gray-800 text-xs sm:text-[14px] focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white appearance-none cursor-pointer"
             >
               <option value="" disabled className="text-gray-400">Select food category</option>
               <option value="veg">Pure Veg</option>
@@ -179,57 +179,57 @@ export const ShopInformationView: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-gray-700">Phone Number</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="flex flex-col gap-1 sm:gap-1.5">
+              <label className="text-xs sm:text-[13px] font-semibold text-gray-700">Phone Number</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-800 text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-gray-200 text-gray-800 text-xs sm:text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white"
                 placeholder="+91 98765 43210"
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-gray-700">WhatsApp Number</label>
+            <div className="flex flex-col gap-1 sm:gap-1.5">
+              <label className="text-xs sm:text-[13px] font-semibold text-gray-700">WhatsApp Number</label>
               <input
                 type="tel"
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-800 text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-gray-200 text-gray-800 text-xs sm:text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-[#fdf8f3] focus:bg-white"
                 placeholder="+91 98765 43210"
               />
             </div>
           </div>
 
           {/* Google Maps Link / Location Section */}
-          <div className="flex flex-col gap-2.5 p-4 bg-[#fdf8f3] border border-gray-200 rounded-xl">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-col gap-2 sm:gap-2.5 p-3 sm:p-4 bg-[#fdf8f3] border border-gray-200 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
-                <label className="text-[13px] font-semibold text-gray-800">Google Maps Link</label>
-                <p className="text-[11px] text-gray-500">Paste your shop's Google Maps location link or exact address</p>
+                <label className="text-xs sm:text-[13px] font-semibold text-gray-800">Google Maps Link</label>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">Paste your shop's Google Maps location link or exact address</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={handlePasteAddress}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 shadow-xs transition-all active:scale-[0.98]"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-2xs transition-all active:scale-[0.98]"
                   title="Paste Google Maps link from clipboard"
                 >
-                  {pastedStatus ? <Check size={14} className="text-emerald-600" /> : <Clipboard size={14} className="text-gray-500" />}
-                  <span>{pastedStatus ? 'Pasted!' : 'Paste GMap Link'}</span>
+                  {pastedStatus ? <Check size={13} className="text-emerald-600" /> : <Clipboard size={13} className="text-gray-500" />}
+                  <span>{pastedStatus ? 'Pasted!' : 'Paste Link'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleOpenGoogleMaps}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#4285F4] hover:bg-[#3367D6] px-3.5 py-1.5 rounded-lg shadow-sm transition-all active:scale-[0.98] group"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-bold text-white bg-[#4285F4] hover:bg-[#3367D6] px-3 py-1.5 rounded-lg shadow-2xs transition-all active:scale-[0.98] group"
                   title="Open Google Maps to search or copy exact location link"
                 >
-                  <MapPin size={14} className="text-white fill-white/20" />
+                  <MapPin size={13} className="text-white fill-white/20" />
                   <span>Google Maps</span>
-                  <ExternalLink size={12} className="opacity-80 group-hover:translate-x-0.5 transition-transform" />
+                  <ExternalLink size={11} className="opacity-80 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
             </div>
@@ -240,7 +240,7 @@ export const ShopInformationView: React.FC = () => {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-4 py-2.5 pr-28 rounded-lg border border-gray-200 text-gray-800 text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-2.5 pr-20 sm:pr-28 rounded-lg border border-gray-200 text-gray-800 text-xs sm:text-[14px] placeholder:text-gray-400 placeholder:opacity-100 focus:outline-none focus:border-[#f67412] focus:ring-2 focus:ring-[#f67412]/20 transition-all bg-white"
                 placeholder="https://maps.app.goo.gl/... or full shop address"
               />
               {address.trim() && (
@@ -252,32 +252,32 @@ export const ShopInformationView: React.FC = () => {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute right-2 text-xs font-semibold text-[#f67412] hover:text-[#d96610] bg-[#fdf8f3] hover:bg-[#f8f0e5] px-2.5 py-1 rounded-md border border-[#f67412]/20 flex items-center gap-1 transition-colors"
+                  className="absolute right-1.5 text-[10px] sm:text-xs font-semibold text-[#f67412] hover:text-[#d96610] bg-[#fdf8f3] hover:bg-[#f8f0e5] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-[#f67412]/20 flex items-center gap-1 transition-colors"
                   title="Open and test this Google Maps link in a new tab"
                 >
-                  <span>Test Link</span>
-                  <ExternalLink size={12} />
+                  <span>Test</span>
+                  <ExternalLink size={11} />
                 </a>
               )}
             </div>
 
-            <p className="text-[12px] text-gray-500 flex items-center gap-1 mt-0.5">
-              <span className="font-medium text-[#f67412]">Tip:</span> Click <span className="font-semibold text-gray-700">Google Maps</span> above to find your shop, click <span className="font-semibold text-gray-700">Share &gt; Copy Link</span>, then paste it here.
+            <p className="text-[10px] sm:text-[12px] text-gray-500 flex items-center gap-1 mt-0.5">
+              <span className="font-medium text-[#f67412]">Tip:</span> Open Google Maps to copy your location link and paste here.
             </p>
           </div>
         </div>
 
         {/* Save Button */}
-        <div className="pt-6 pb-8">
+        <div className="pt-3 pb-5 sm:pt-6 sm:pb-8">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-[#f67412] text-white font-bold py-3.5 rounded-xl hover:bg-[#d96610] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2"
+            className="w-full bg-[#f67412] text-white font-extrabold py-2.5 sm:py-3.5 text-xs sm:text-sm rounded-xl hover:bg-[#d96610] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-1.5"
           >
             {savedSuccess ? (
               <>
-                <Check size={18} className="text-white" />
+                <Check size={16} className="text-white" />
                 <span>Shop Information Saved!</span>
               </>
             ) : (

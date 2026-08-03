@@ -93,13 +93,12 @@ interface PendingItem {
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
   return (
     <div
-      className={`fixed top-24 right-6 z-[200] px-5 py-3 rounded-2xl shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200 ${type === 'success'
+      className={`fixed top-5 left-1/2 -translate-x-1/2 sm:top-24 sm:right-6 sm:left-auto sm:translate-x-0 z-[200] px-4 py-2.5 sm:px-5 sm:py-3 rounded-full sm:rounded-2xl shadow-xl border flex items-center justify-center max-w-[90vw] animate-in fade-in slide-in-from-top-4 duration-200 whitespace-nowrap ${type === 'success'
           ? 'bg-slate-900 text-white border-slate-700'
           : 'bg-rose-900 text-white border-rose-700'
         }`}
     >
-      {type === 'error' && <AlertCircle size={18} className="text-rose-300 shrink-0" />}
-      <span className="text-sm font-bold">{message}</span>
+      <span className="text-xs sm:text-sm font-bold truncate">{message}</span>
     </div>
   );
 }
@@ -889,14 +888,14 @@ export default function MenuManagement() {
       {toast && <Toast message={toast.message} type={toast.type} />}
 
       {/* ——— Manage & Create Menu Banner Card ——— */}
-      <div className="bg-gradient-to-r from-[#f77512] via-[#ff8826] to-[#ff9838] rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-white shadow-md hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/20 relative overflow-hidden">
-        <div className="flex flex-col gap-1.5 z-10">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight drop-shadow-sm">
+      <div className="bg-gradient-to-r from-[#f77512] via-[#ff8826] to-[#ff9838] rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 text-white shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border border-white/20 relative overflow-hidden">
+        <div className="flex flex-col gap-1 z-10 text-center sm:text-left w-full sm:w-auto items-center sm:items-start">
+          <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+            <h1 className="text-base sm:text-2xl md:text-3xl font-black tracking-tight drop-shadow-sm">
               Manage &amp; Create Menu
             </h1>
             {shop?.name && (
-              <span className="bg-white/25 text-white text-xs font-extrabold px-3 py-1 rounded-full backdrop-blur-md border border-white/30 shadow-sm">
+              <span className="bg-white/25 text-white text-[10px] sm:text-xs font-black px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full backdrop-blur-md border border-white/30 shadow-sm shrink-0">
                 {shop.name}
               </span>
             )}
@@ -906,9 +905,9 @@ export default function MenuManagement() {
         <button
           type="button"
           onClick={handleOpenCreateModal}
-          className="bg-slate-900 hover:bg-black text-white font-black px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 text-xs sm:text-sm tracking-wide shrink-0 cursor-pointer border border-slate-700/80 active:scale-95 z-10 self-start sm:self-auto"
+          className="bg-slate-900 hover:bg-black text-white font-black px-4 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm tracking-wide shrink-0 cursor-pointer border border-slate-700/80 active:scale-95 z-10 w-full sm:w-auto max-w-[320px] mx-auto sm:mx-0 whitespace-nowrap"
         >
-          <Plus size={18} className="text-[#f77512] stroke-[3]" />
+          <Plus size={16} className="text-[#f77512] stroke-[3] sm:w-[18px] sm:h-[18px]" />
           <span>Create Menu Item</span>
         </button>
 
@@ -917,10 +916,10 @@ export default function MenuManagement() {
       </div>
 
       {/* ——— Categories Management Card (Under Manage & Create Menu) ——— */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+      <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col gap-2.5 sm:gap-3">
+        <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2.5 sm:pb-3">
           <div>
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+            <h3 className="text-xs sm:text-base font-black text-slate-900 tracking-tight">
               Manage Categories ({categories.length})
             </h3>
           </div>
@@ -930,19 +929,19 @@ export default function MenuManagement() {
             <button
               type="button"
               onClick={() => setIsCreatingCategoryInline(true)}
-              className="self-start sm:self-auto flex items-center gap-2 text-xs sm:text-sm font-bold text-[#f77512] hover:text-white bg-[#fff5ec] hover:bg-[#f77512] px-4 py-2 rounded-xl border border-[#f77512]/30 transition-all shadow-sm cursor-pointer active:scale-95"
+              className="flex items-center gap-1.5 text-[11.5px] sm:text-sm font-bold text-[#f77512] hover:text-white bg-[#fff5ec] hover:bg-[#f77512] px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl border border-[#f77512]/30 transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
             >
-              <Plus size={16} className="stroke-[3]" />
+              <Plus size={14} className="stroke-[3] sm:w-[16px] sm:h-[16px]" />
               <span>Add Category</span>
             </button>
           ) : (
-            <div className="flex items-center gap-2 animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
               <input
                 type="text"
                 value={newCategoryInput}
                 onChange={(e) => setNewCategoryInput(e.target.value)}
                 placeholder="Category name..."
-                className="px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl border-2 border-[#f77512] outline-none bg-white text-slate-800 w-48 sm:w-64 shadow-inner"
+                className="px-2.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl border-2 border-[#f77512] outline-none bg-white text-slate-800 w-32 sm:w-64 shadow-inner"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleAddCategory();
@@ -953,9 +952,9 @@ export default function MenuManagement() {
                 type="button"
                 onClick={handleAddCategory}
                 disabled={isCreatingCategory}
-                className="bg-[#f77512] hover:bg-[#e05a00] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl transition-all shadow flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="bg-[#f77512] hover:bg-[#e05a00] text-white text-xs sm:text-sm font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl transition-all shadow flex items-center gap-1 cursor-pointer active:scale-95"
               >
-                {isCreatingCategory ? <Loader2 size={14} className="animate-spin" /> : <Check size={16} />}
+                {isCreatingCategory ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
                 <span>Save</span>
               </button>
               <button
@@ -964,17 +963,17 @@ export default function MenuManagement() {
                   setIsCreatingCategoryInline(false);
                   setNewCategoryInput('');
                 }}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 cursor-pointer"
               >
-                <X size={16} />
+                <X size={14} />
               </button>
             </div>
           )}
         </div>
 
-        {/* Category Items Cards Grid */}
+        {/* Category Items Cards Grid — Side-by-side horizontal scroll */}
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-2.5 sm:gap-3 pt-1">
+          <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 sm:gap-3 py-1 items-center w-full">
             {categories.map((cat) => {
               const isEditingThis = editingCategoryId === cat.id;
 
@@ -982,13 +981,13 @@ export default function MenuManagement() {
                 return (
                   <div
                     key={cat.id}
-                    className="flex items-center gap-2 bg-orange-50 border-2 border-[#f77512] rounded-2xl px-3.5 py-2 shadow-sm animate-in fade-in"
+                    className="flex items-center gap-1.5 bg-orange-50 border-2 border-[#f77512] rounded-xl sm:rounded-2xl px-2.5 py-1.5 shadow-sm animate-in fade-in shrink-0 whitespace-nowrap"
                   >
                     <input
                       type="text"
                       value={editingCategoryName}
                       onChange={(e) => setEditingCategoryName(e.target.value)}
-                      className="text-xs sm:text-sm font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-orange-300 outline-none w-32 sm:w-44"
+                      className="text-xs sm:text-sm font-bold text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-orange-300 outline-none w-28 sm:w-44"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleUpdateCategory(cat.id, editingCategoryName);
@@ -998,10 +997,10 @@ export default function MenuManagement() {
                     <button
                       type="button"
                       onClick={() => handleUpdateCategory(cat.id, editingCategoryName)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                       title="Save Category Name"
                     >
-                      <Check size={14} />
+                      <Check size={13} />
                       <span>Save</span>
                     </button>
                     <button
@@ -1010,7 +1009,7 @@ export default function MenuManagement() {
                       className="text-gray-500 hover:text-slate-800 p-1 hover:bg-gray-200 rounded-lg cursor-pointer"
                       title="Cancel"
                     >
-                      <X size={14} />
+                      <X size={13} />
                     </button>
                   </div>
                 );
@@ -1019,23 +1018,22 @@ export default function MenuManagement() {
               return (
                 <div
                   key={cat.id}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 hover:bg-slate-100/80 transition-all shadow-xs"
+                  className="flex items-center gap-2 sm:gap-3 px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11.5px] sm:text-sm font-bold bg-slate-50 text-slate-800 border border-slate-200/90 hover:border-slate-300 hover:bg-slate-100/80 transition-all shadow-2xs shrink-0 whitespace-nowrap"
                 >
-                  <span className="font-extrabold text-slate-900">{cat.name}</span>
+                  <span className="font-black text-slate-900">{cat.name}</span>
 
-                  {/* Prominent Edit & Delete Buttons */}
-                  <div className="flex items-center gap-1.5 border-l border-slate-300 pl-2.5 ml-1">
+                  {/* Edit & Delete Icon Only Buttons */}
+                  <div className="flex items-center gap-1 border-l border-slate-200/80 pl-2 ml-0.5">
                     <button
                       type="button"
                       onClick={() => {
                         setEditingCategoryId(cat.id);
                         setEditingCategoryName(cat.name);
                       }}
-                      className="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-[#f77512] bg-white hover:bg-orange-50 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-orange-200 transition-all cursor-pointer shadow-xs active:scale-95"
+                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white hover:bg-orange-50 text-slate-600 hover:text-[#f77512] border border-slate-200 hover:border-orange-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
                       title={`Edit "${cat.name}"`}
                     >
-                      <Pencil size={13} className="text-[#f77512]" />
-                      <span>Edit</span>
+                      <Pencil size={12} className="text-[#f77512] sm:w-[14px] sm:h-[14px]" />
                     </button>
                     <button
                       type="button"
@@ -1044,11 +1042,10 @@ export default function MenuManagement() {
                           handleDeleteCategory(cat.id);
                         }
                       }}
-                      className="flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-rose-200 transition-all cursor-pointer shadow-xs active:scale-95"
+                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
                       title={`Delete "${cat.name}"`}
                     >
-                      <Trash2 size={13} className="text-rose-500" />
-                      <span>Delete</span>
+                      <Trash2 size={12} className="text-rose-500 sm:w-[14px] sm:h-[14px]" />
                     </button>
                   </div>
                 </div>
@@ -1058,26 +1055,26 @@ export default function MenuManagement() {
         )}
       </div>
 
-      {/* ——— Controls Bar (Search + Category Filter Pills like Previous) ——— */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-gray-200/80 shadow-sm">
-        <div className="relative flex items-center w-full md:w-80 h-11 rounded-2xl bg-gray-100/80 px-3.5 border border-gray-200 focus-within:border-[#f77512] focus-within:bg-white transition-all">
-          <Search size={18} className="text-gray-400 shrink-0 mr-2" />
+      {/* ——— Controls Bar (Search + Category Filter Pills) ——— */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-200/80 shadow-sm">
+        <div className="relative flex items-center w-full md:w-80 h-9.5 sm:h-11 rounded-xl sm:rounded-2xl bg-gray-100/80 px-3 sm:px-3.5 border border-gray-200 focus-within:border-[#f77512] focus-within:bg-white transition-all">
+          <Search size={16} className="text-gray-400 shrink-0 mr-2 sm:w-[18px] sm:h-[18px]" />
           <input
             type="text"
             id="menu-search"
             placeholder="Search menu items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent outline-none text-sm font-medium text-slate-800 placeholder-gray-400"
+            className="w-full bg-transparent outline-none text-xs sm:text-sm font-medium text-slate-800 placeholder-gray-400"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 cursor-pointer">
-              <X size={16} />
+              <X size={15} />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 w-full md:w-auto">
           {allCategoryPills.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
@@ -1085,9 +1082,9 @@ export default function MenuManagement() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold whitespace-nowrap transition-all cursor-pointer ${isActive
-                    ? 'bg-[#f77512] text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-slate-900'
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[12px] sm:text-sm font-extrabold whitespace-nowrap transition-all cursor-pointer ${isActive
+                    ? 'bg-[#f77512] text-white shadow-xs'
+                    : 'bg-gray-100/90 text-slate-600 hover:bg-gray-200/80 hover:text-slate-900'
                   }`}
               >
                 {cat}
@@ -1120,9 +1117,9 @@ export default function MenuManagement() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {cardItems.map((item) => (
-            <div key={item.id} className="relative">
+            <div key={item.id}>
               <FoodCard
                 {...item}
                 variant="vendor"
@@ -1130,29 +1127,6 @@ export default function MenuManagement() {
                 onDelete={handleDeleteItem}
                 onToggleAvailability={handleToggleAvailability}
               />
-              {/* Sold-out overlay badge */}
-              {!item.isAvailable && (
-                <div className="absolute inset-0 rounded-[30px] flex items-center justify-center pointer-events-none">
-                  <span className="bg-slate-900/80 text-white text-xs font-black px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
-                    SOLD OUT
-                  </span>
-                </div>
-              )}
-              {/* Sold-out toggle button */}
-              <button
-                type="button"
-                onClick={() => handleToggleAvailability(item.id)}
-                disabled={isTogglingId === item.id}
-                className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 text-[10px] font-black bg-white/90 backdrop-blur-sm text-slate-700 hover:bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
-              >
-                {isTogglingId === item.id ? (
-                  <Loader2 size={12} className="animate-spin inline" />
-                ) : item.isAvailable ? (
-                  'Mark Sold Out'
-                ) : (
-                  'Mark Available'
-                )}
-              </button>
             </div>
           ))}
         </div>
@@ -1475,8 +1449,8 @@ export default function MenuManagement() {
                     </div>
                     {isCategoryDropdownOpen && (
                       <>
-                        <div className="fixed inset-0 z-30 bg-transparent" onClick={() => setIsCategoryDropdownOpen(false)} />
-                        <div className="absolute top-full left-0 right-0 mt-2 z-40 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 p-2 overflow-hidden flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-150" onClick={(e) => e.stopPropagation()}>
+                        <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsCategoryDropdownOpen(false)} />
+                        <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200/90 p-2.5 flex flex-col gap-1 min-w-[240px] sm:min-w-[260px] max-w-[90vw] animate-in fade-in slide-in-from-top-2 duration-150" onClick={(e) => e.stopPropagation()}>
                           <div className="max-h-40 overflow-y-auto no-scrollbar flex flex-col gap-0.5">
                             {categories.map((cat) => {
                               const isSelected = activeForm.categoryId === cat.id;
@@ -1493,23 +1467,23 @@ export default function MenuManagement() {
                           </div>
                           <div className="pt-2 border-t border-gray-100">
                             {isCreatingCategoryInline ? (
-                              <div className="flex items-center gap-2 p-1">
+                              <div className="flex items-center gap-1.5 p-1 bg-gray-50/80 rounded-xl border border-gray-200">
                                 <input type="text" placeholder="New Category..." value={newCategoryInput}
                                   onChange={(e) => setNewCategoryInput(e.target.value)}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory(); } }}
-                                  className="w-full h-10 px-3.5 rounded-xl border border-gray-300 outline-none text-sm font-medium text-slate-800 focus:border-[#f77512]"
+                                  className="flex-1 min-w-0 h-9 px-2.5 rounded-lg border border-gray-300 outline-none text-xs font-semibold text-slate-800 focus:border-[#f77512] bg-white"
                                   autoFocus
                                 />
                                 <button type="button" onClick={handleAddCategory} disabled={isCreatingCategory}
-                                  className="bg-[#f77512] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#e05a00] shrink-0 shadow-sm disabled:opacity-50 cursor-pointer"
+                                  className="bg-[#f77512] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#e05a00] shrink-0 shadow-xs disabled:opacity-50 cursor-pointer active:scale-95"
                                 >
-                                  {isCreatingCategory ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+                                  {isCreatingCategory ? <Loader2 size={13} className="animate-spin" /> : 'Add'}
                                 </button>
-                                <button type="button" onClick={() => setIsCreatingCategoryInline(false)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg cursor-pointer"><X size={16} /></button>
+                                <button type="button" onClick={() => setIsCreatingCategoryInline(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200/60 cursor-pointer shrink-0"><X size={15} /></button>
                               </div>
                             ) : (
                               <button type="button" onClick={() => setIsCreatingCategoryInline(true)}
-                                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-[#f77512]/10 text-[#f77512] font-semibold text-xs hover:bg-[#f77512]/20 transition-colors cursor-pointer"
+                                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#f77512]/10 text-[#f77512] font-extrabold text-xs hover:bg-[#f77512]/20 transition-colors cursor-pointer"
                               >
                                 <Plus size={14} strokeWidth={2.5} /><span>Create Category</span>
                               </button>
@@ -1633,24 +1607,24 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {/* â”€â”€ EDIT MODAL (single item â€” unchanged) â”€â”€ */}
+      {/* ——— EDIT MODAL (single item — exact match of Create modal structure) ——— */}
       {isModalOpen && editingItemId && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl border border-gray-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center overflow-hidden">
+          <div className="bg-white w-full sm:max-w-xl sm:rounded-[2.5rem] rounded-t-[2.5rem] shadow-2xl border border-gray-200 flex flex-col max-h-[93vh] sm:max-h-[90vh] sm:my-8 animate-in fade-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
 
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white p-6 sm:p-8 flex items-center justify-between">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Edit Menu Item</h2>
+            <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between rounded-t-[2.5rem] shrink-0">
+              <h2 className="text-xl font-black tracking-tight">Edit Menu Item</h2>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="bg-white/10 hover:bg-white/20 p-2.5 rounded-full text-gray-300 hover:text-white transition-colors cursor-pointer"
+                className="bg-white/10 hover:bg-white/20 p-2 rounded-full text-gray-300 hover:text-white transition-colors cursor-pointer"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Shake animation â€” scoped to edit modal */}
+            {/* Shake animation — scoped to edit modal */}
             <style>{`
               @keyframes field-shake {
                 0%   { transform: translateX(0); }
@@ -1665,8 +1639,8 @@ export default function MenuManagement() {
               .shake { animation: field-shake 0.4s ease-in-out; }
             `}</style>
 
-            {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6 sm:p-8 flex flex-col gap-5">
+            {/* Modal Form Content — Scrollable Body */}
+            <form id="edit-item-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0 px-5 sm:px-6 py-4 flex flex-col gap-4">
 
               {/* 1. Image */}
               <div>
@@ -1675,7 +1649,7 @@ export default function MenuManagement() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`relative w-full h-44 sm:h-48 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden group select-none ${
+                  className={`relative w-full h-40 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden group select-none ${
                     isDraggingImage
                       ? 'border-[#f77512] bg-[#f77512]/10 scale-[1.01]'
                       : formData.imagePreview
@@ -1687,30 +1661,30 @@ export default function MenuManagement() {
                     <>
                       <img src={formData.imagePreview} alt="Food preview" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
-                        <label className="bg-white text-slate-900 text-xs font-extrabold px-4 py-2.5 rounded-full shadow-lg hover:bg-gray-100 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95">
-                          <Upload size={14} className="text-[#f77512]" />
-                          <span>Change Image</span>
+                        <label className="bg-white text-slate-900 text-xs font-extrabold px-4 py-2 rounded-full shadow-lg hover:bg-gray-100 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95">
+                          <Upload size={13} className="text-[#f77512]" />
+                          <span>Change</span>
                           <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                         </label>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setFormData((prev) => ({ ...prev, imagePreview: '', imageUrl: '', imageFile: null })); }}
-                          className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-full shadow-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold px-4 py-2 rounded-full shadow-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                         >
-                          <X size={14} /><span>Remove</span>
+                          <X size={13} /><span>Remove</span>
                         </button>
                       </div>
                     </>
                   ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center p-6 cursor-pointer gap-2.5">
+                    <label className="w-full h-full flex flex-col items-center justify-center p-6 cursor-pointer gap-2">
                       <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                      <div className="w-14 h-14 rounded-2xl bg-[#f77512]/10 flex items-center justify-center text-[#f77512] shadow-sm group-hover:scale-110 group-hover:bg-[#f77512] group-hover:text-white transition-all duration-300">
-                        <Upload size={26} strokeWidth={2.5} />
+                      <div className="w-12 h-12 rounded-2xl bg-[#f77512]/10 flex items-center justify-center text-[#f77512] group-hover:scale-110 group-hover:bg-[#f77512] group-hover:text-white transition-all duration-300">
+                        <Upload size={22} strokeWidth={2.5} />
                       </div>
-                      <div className="flex flex-col items-center text-center gap-1">
-                        <p className="text-slate-900 font-extrabold text-sm sm:text-base tracking-tight">Upload Food Image</p>
-                        <p className="text-slate-500 font-semibold text-xs sm:text-sm">
-                          Drag & Drop or <span className="text-[#f77512] underline decoration-2 underline-offset-2 font-bold">Click to Upload</span>
+                      <div className="flex flex-col items-center text-center gap-0.5">
+                        <p className="text-slate-900 font-extrabold text-sm">Upload Food Image</p>
+                        <p className="text-slate-500 font-semibold text-xs">
+                          Drag & drop or <span className="text-[#f77512] underline decoration-2 underline-offset-2">click to upload</span>
                         </p>
                       </div>
                     </label>
@@ -1751,7 +1725,7 @@ export default function MenuManagement() {
               </div>
 
               {/* 4. Category & Price */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {/* Category Dropdown */}
                 <div className="relative">
                   <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">Category *</label>
@@ -1769,14 +1743,14 @@ export default function MenuManagement() {
                       }`}
                   >
                     <span className={`truncate ${fieldErrors.category && !categories.find((c) => c.id === formData.categoryId) ? 'text-rose-400 font-semibold' : 'text-slate-800'}`}>
-                      {categories.find((c) => c.id === formData.categoryId)?.name || (fieldErrors.category ? 'Category is required' : 'Select Category')}
+                      {categories.find((c) => c.id === formData.categoryId)?.name || (fieldErrors.category ? 'Required' : 'Select...')}
                     </span>
-                    <ChevronDown size={18} className={`transition-transform duration-200 ${fieldErrors.category ? 'text-rose-400' : isCategoryDropdownOpen ? 'rotate-180 text-[#f77512]' : 'text-gray-500'}`} />
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${fieldErrors.category ? 'text-rose-400' : isCategoryDropdownOpen ? 'rotate-180 text-[#f77512]' : 'text-gray-500'}`} />
                   </div>
                   {isCategoryDropdownOpen && (
                     <>
-                      <div className="fixed inset-0 z-30 bg-transparent" onClick={() => setIsCategoryDropdownOpen(false)} />
-                      <div className="absolute top-full left-0 right-0 mt-2 z-40 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 p-2 overflow-hidden flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-150" onClick={(e) => e.stopPropagation()}>
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsCategoryDropdownOpen(false)} />
+                      <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200/90 p-2.5 flex flex-col gap-1 min-w-[240px] sm:min-w-[260px] max-w-[90vw] animate-in fade-in slide-in-from-top-2 duration-150" onClick={(e) => e.stopPropagation()}>
                         <div className="max-h-40 overflow-y-auto no-scrollbar flex flex-col gap-0.5">
                           {categories.map((cat) => {
                             const isSelected = formData.categoryId === cat.id;
@@ -1793,23 +1767,23 @@ export default function MenuManagement() {
                         </div>
                         <div className="pt-2 border-t border-gray-100">
                           {isCreatingCategoryInline ? (
-                            <div className="flex items-center gap-2 p-1">
-                              <input type="text" placeholder="New Category Name..." value={newCategoryInput}
+                            <div className="flex items-center gap-1.5 p-1 bg-gray-50/80 rounded-xl border border-gray-200">
+                              <input type="text" placeholder="New Category..." value={newCategoryInput}
                                 onChange={(e) => setNewCategoryInput(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory(); } }}
-                                className="w-full h-10 px-3.5 rounded-xl border border-gray-300 outline-none text-sm font-medium text-slate-800 focus:border-[#f77512]"
+                                className="flex-1 min-w-0 h-9 px-2.5 rounded-lg border border-gray-300 outline-none text-xs font-semibold text-slate-800 focus:border-[#f77512] bg-white"
                                 autoFocus
                               />
                               <button type="button" onClick={handleAddCategory} disabled={isCreatingCategory}
-                                className="bg-[#f77512] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#e05a00] shrink-0 shadow-sm disabled:opacity-50 cursor-pointer"
+                                className="bg-[#f77512] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#e05a00] shrink-0 shadow-xs disabled:opacity-50 cursor-pointer active:scale-95"
                               >
-                                {isCreatingCategory ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+                                {isCreatingCategory ? <Loader2 size={13} className="animate-spin" /> : 'Add'}
                               </button>
-                              <button type="button" onClick={() => setIsCreatingCategoryInline(false)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"><X size={16} /></button>
+                              <button type="button" onClick={() => setIsCreatingCategoryInline(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200/60 cursor-pointer shrink-0"><X size={15} /></button>
                             </div>
                           ) : (
                             <button type="button" onClick={() => setIsCreatingCategoryInline(true)}
-                              className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-[#f77512]/10 text-[#f77512] font-semibold text-xs sm:text-sm hover:bg-[#f77512]/20 transition-colors cursor-pointer"
+                              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#f77512]/10 text-[#f77512] font-extrabold text-xs hover:bg-[#f77512]/20 transition-colors cursor-pointer"
                             >
                               <Plus size={15} strokeWidth={2.5} /><span>Create Category</span>
                             </button>
@@ -1824,11 +1798,11 @@ export default function MenuManagement() {
                 <div>
                   <label htmlFor="menu-item-price" className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">Price *</label>
                   <div className="relative flex items-center">
-                    <span className="absolute left-4 text-slate-900 font-extrabold text-base select-none">â‚¹</span>
+                    <span className="absolute left-4 text-slate-900 font-extrabold text-base select-none">₹</span>
                     <input
                       id="menu-item-price"
                       type="text"
-                      placeholder={fieldErrors.price ? 'Price is required' : '199'}
+                      placeholder={fieldErrors.price ? 'Required' : '199'}
                       value={formData.price}
                       onChange={(e) => {
                         setFormData((prev) => ({ ...prev, price: e.target.value }));
@@ -1869,15 +1843,15 @@ export default function MenuManagement() {
               </div>
 
               {/* 6. Toggles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <label className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${formData.isBestSeller ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm' : 'bg-gray-50 border-gray-200 text-slate-700'}`}>
+              <div className="grid grid-cols-2 gap-3">
+                <label className={`flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${formData.isBestSeller ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm' : 'bg-gray-50 border-gray-200 text-slate-700'}`}>
                   <input type="checkbox" checked={formData.isBestSeller} onChange={(e) => setFormData((prev) => ({ ...prev, isBestSeller: e.target.checked }))} className="w-4 h-4 accent-[#f77512] rounded cursor-pointer" />
                   <div className="flex flex-col">
                     <span className="font-extrabold text-xs text-amber-950 flex items-center gap-1.5"><Star size={13} className="text-amber-500 fill-amber-400 shrink-0" /><span>Bestseller</span></span>
                     <span className="text-[10px] text-gray-500 font-medium">Mark as Bestseller</span>
                   </div>
                 </label>
-                <label className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${formData.isTodaysSpecial ? 'bg-orange-50 border-orange-400 text-orange-900 shadow-sm' : 'bg-gray-50 border-gray-200 text-slate-700'}`}>
+                <label className={`flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${formData.isTodaysSpecial ? 'bg-orange-50 border-orange-400 text-orange-900 shadow-sm' : 'bg-gray-50 border-gray-200 text-slate-700'}`}>
                   <input type="checkbox" checked={formData.isTodaysSpecial} onChange={(e) => setFormData((prev) => ({ ...prev, isTodaysSpecial: e.target.checked }))} className="w-4 h-4 accent-[#f77512] rounded cursor-pointer" />
                   <div className="flex flex-col">
                     <span className="font-extrabold text-xs text-orange-950 flex items-center gap-1.5"><Flame size={13} className="text-orange-500 fill-orange-500/20 shrink-0" /><span>Today&apos;s Special</span></span>
@@ -1885,22 +1859,28 @@ export default function MenuManagement() {
                   </div>
                 </label>
               </div>
-
-              {/* Form Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-3 rounded-xl text-slate-600 font-bold hover:bg-gray-100 transition-colors text-sm cursor-pointer">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving || isUploadingImage}
-                  className="bg-[#f77512] hover:bg-[#e05a00] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black px-7 py-3 rounded-xl shadow-md transition-all text-sm cursor-pointer flex items-center gap-2 active:scale-95"
-                >
-                  {(isSaving || isUploadingImage) ? <Loader2 size={16} className="animate-spin" /> : <Plus size={18} />}
-                  {isUploadingImage ? 'Uploading Image...' : isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
             </form>
+
+            {/* Sticky Modal Footer */}
+            <div className="border-t border-gray-200 px-5 py-4 flex items-center justify-end gap-2 bg-white rounded-b-[2.5rem] shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isSaving || isUploadingImage}
+                className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-gray-100 transition-colors text-sm cursor-pointer disabled:opacity-40 shrink-0"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="edit-item-form"
+                disabled={isSaving || isUploadingImage}
+                className="flex items-center gap-2 bg-[#f77512] hover:bg-[#e05a00] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black px-5 py-2.5 rounded-xl shadow-md transition-all text-sm cursor-pointer active:scale-95 shrink-0"
+              >
+                {(isSaving || isUploadingImage) ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
+                <span>{isUploadingImage ? 'Uploading Image...' : isSaving ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

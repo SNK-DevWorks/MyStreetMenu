@@ -33,10 +33,16 @@ function ContentView({ activeTab, user, loading }: {
 
 export const VendorSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('shop-info');
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
   const { user, loading } = useVendorUser();
 
+  const handleSelectTab = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    setMobileView('detail');
+  };
+
   return (
-    <div className="w-full bg-[#fdf8f3] flex items-start justify-center p-4 md:px-8 md:py-6 font-sans">
+    <div className="w-full bg-[#fdf8f3] flex items-start justify-center p-2 sm:p-4 md:px-8 py-2 md:py-6 font-sans">
       {/* Scrollbar + Font Styles */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -51,24 +57,39 @@ export const VendorSettingsPage: React.FC = () => {
       }} />
 
       {/* Main Container */}
-      <div className="bg-white w-full max-w-[1000px] h-[800px] max-h-[90vh] rounded-2xl border border-gray-200 shadow-xl overflow-hidden flex flex-row">
+      <div className="bg-white w-full max-w-[1050px] rounded-xl sm:rounded-2xl border border-gray-200/90 shadow-sm md:shadow-xl overflow-hidden flex flex-col md:flex-row md:h-[750px] lg:h-[800px] md:max-h-[85vh]">
 
         {/* Left Sidebar */}
-        <SettingsSidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          user={user}
-          loading={loading}
-        />
+        <div className={`w-full md:w-[300px] shrink-0 h-full ${mobileView === 'detail' ? 'hidden md:block' : 'block'}`}>
+          <SettingsSidebar
+            activeTab={activeTab}
+            setActiveTab={handleSelectTab}
+            user={user}
+            loading={loading}
+          />
+        </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 bg-[#fdf8f3] flex flex-col relative h-full min-h-0 overflow-hidden">
+        <div className={`flex-1 bg-[#fdf8f3] flex-col relative h-full min-h-0 overflow-hidden ${mobileView === 'list' ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 duration-200'}`}>
           {/* Content Header */}
-          <div className="h-[60px] bg-white border-b border-gray-200 flex items-center px-4 shrink-0 z-10 shadow-sm">
-            <div className="flex items-center text-[#1a1a1a] p-1.5 rounded-lg">
-              <ChevronLeft size={24} />
-              <span className="font-bold text-[16px] ml-1">{TAB_LABELS[activeTab]}</span>
+          <div className="h-[54px] sm:h-[60px] bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-4 shrink-0 z-10 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setMobileView('list')}
+              className="flex items-center gap-1 text-[#f77512] hover:text-[#e05a00] font-extrabold text-sm p-1.5 rounded-lg hover:bg-orange-50 transition-colors cursor-pointer md:hidden"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+              <span>Settings</span>
+            </button>
+
+            <div className="flex items-center text-[#1a1a1a] font-bold text-sm sm:text-[16px] truncate">
+              <span className="hidden md:inline-flex items-center mr-1 text-gray-400">
+                <ChevronLeft size={20} />
+              </span>
+              <span>{TAB_LABELS[activeTab]}</span>
             </div>
+
+            <div className="w-12 md:hidden" /> {/* Spacer for mobile centered title */}
           </div>
 
           {/* Dynamic Tab Content */}

@@ -97,42 +97,41 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
     <div className={`w-full max-w-[1200px] flex flex-col gap-6 ${className}`}>
 
       {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
-          <Sparkles className="text-amber-400" size={18} />
-          <span className="text-xs font-bold">Today's Specials updated successfully!</span>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-700/80 flex items-center justify-center text-center animate-in fade-in slide-in-from-top-4 duration-200 text-xs sm:text-sm font-bold whitespace-nowrap max-w-[90vw]">
+          <span className="text-xs sm:text-sm font-extrabold tracking-wide">Today's Specials updated successfully!</span>
         </div>
       )}
 
-      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight px-1">
+      <h2 className="text-[20px] sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight px-1">
         Daily Specials
       </h2>
 
       {/* ─── Update Today's Special Banner Card ─── */}
       <div
         onClick={handleOpenModal}
-        className="w-full group cursor-pointer hover:-translate-y-1 transition-all duration-300 select-none"
+        className="w-full group cursor-pointer hover:-translate-y-0.5 transition-all duration-300 select-none"
       >
         <div
-          className="w-full min-h-[140px] sm:h-[150px] rounded-[2.5rem] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8 shadow-[0_20px_45px_rgba(236,72,153,0.25)] hover:shadow-[0_25px_50px_rgba(236,72,153,0.35)] border border-white/30 transition-all duration-300 relative overflow-hidden"
+          className="w-full h-[95px] sm:h-[140px] md:h-[150px] rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] p-4 sm:p-6 md:p-8 flex flex-row items-center justify-between gap-3 sm:gap-8 shadow-[0_12px_30px_rgba(236,72,153,0.2)] hover:shadow-[0_20px_40px_rgba(236,72,153,0.3)] border border-white/30 transition-all duration-300 relative overflow-hidden"
           style={{
             background: 'linear-gradient(135deg, #EC4899 0%, #F97316 100%)'
           }}
         >
           {/* Left Text Content */}
-          <div className="flex flex-col gap-1 text-center sm:text-left z-10">
-            <div className="flex items-center gap-2 justify-center sm:justify-start">
-              <span className="bg-slate-950/30 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+          <div className="flex flex-col gap-0.5 sm:gap-1 text-left z-10">
+            <div className="flex items-center gap-2 justify-start">
+              <span className="bg-slate-950/30 text-white text-[10px] sm:text-[11px] font-black px-2.5 py-0.5 rounded-full">
                 {specialItemIds.length} Selected
               </span>
             </div>
-            <p className="text-white text-xl sm:text-2xl md:text-3xl font-black tracking-wide drop-shadow-sm mt-1">
+            <p className="text-white text-[16px] sm:text-2xl md:text-3xl font-black tracking-wide drop-shadow-sm mt-0.5 sm:mt-1">
               Update Today's Special
             </p>
           </div>
 
           {/* Right Plus Button */}
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_10px_20px_rgba(0,0,0,0.15)] group-hover:scale-110 group-hover:shadow-[0_14px_28px_rgba(0,0,0,0.22)] transition-all duration-300 z-10">
-            <Plus className="w-8 h-8 text-[#EC4899] stroke-[3]" />
+          <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.15)] group-hover:scale-110 group-hover:shadow-[0_10px_20px_rgba(0,0,0,0.22)] transition-all duration-300 z-10">
+            <Plus className="w-5 h-5 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#EC4899] stroke-[3]" />
           </div>
 
           {/* Decorative blur */}
@@ -144,13 +143,13 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
       <div className="flex flex-col gap-4 mt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600">
-              <Flame size={20} className="fill-orange-500 text-orange-500" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 shrink-0">
+              <Flame size={18} className="fill-orange-500 text-orange-500 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                 Today's Specials
-                <span className="bg-orange-100 text-[#f77512] text-xs font-black px-2.5 py-0.5 rounded-full border border-orange-200">
+                <span className="bg-orange-100 text-[#f77512] text-[11px] sm:text-xs font-black px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full border border-orange-200">
                   {currentSpecials.length} Active
                 </span>
               </h2>
@@ -185,7 +184,7 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {currentSpecials.map(food => (
               <FoodCard
                 key={food.id}
@@ -326,20 +325,20 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 sm:p-5 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
+            <div className="p-3 sm:p-5 bg-white border-t border-gray-100 flex items-center justify-between gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setTempSelectedIds([])}
-                className="text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                className="text-[11.5px] sm:text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer whitespace-nowrap px-1 py-1.5"
               >
                 Clear All
               </button>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
+                  className="px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-slate-600 font-bold hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer whitespace-nowrap"
                 >
                   Cancel
                 </button>
@@ -348,14 +347,15 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
                   type="button"
                   onClick={handleSaveSpecials}
                   disabled={isSaving}
-                  className="bg-[#f77512] hover:bg-[#e05a00] text-white font-black px-6 py-2.5 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                  className="bg-[#f77512] hover:bg-[#e05a00] text-white font-black px-3.5 py-2 sm:px-6 sm:py-2.5 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 whitespace-nowrap"
                 >
                   {isSaving ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <Loader2 size={15} className="animate-spin" />
                   ) : (
-                    <Check size={16} />
+                    <Check size={15} className="stroke-[3]" />
                   )}
-                  Save Today's Specials ({tempSelectedIds.length})
+                  <span className="sm:hidden">Save ({tempSelectedIds.length})</span>
+                  <span className="hidden sm:inline">Save Today's Specials ({tempSelectedIds.length})</span>
                 </button>
               </div>
             </div>

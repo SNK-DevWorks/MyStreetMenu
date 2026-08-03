@@ -24,6 +24,7 @@ import {
   LayoutTemplate,
   MapPin,
   ExternalLink,
+  X,
   LucideIcon
 } from 'lucide-react';
 
@@ -268,10 +269,208 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab }) => {
   );
 };
 
+export const MobileVendorHeader: React.FC<{ activeTab: string }> = ({ activeTab }) => {
+  const { vendorName, vendorLocation, rawLocation, loading } = useVendor();
+  const [open, setOpen] = useState<boolean>(false);
+  const [showWelcome, setShowWelcome] = useState<boolean>(false);
+  const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Auto-hide welcome card after 15s (if not seen before in this session)
+  useEffect(() => {
+    const hasSeenWelcome = sessionStorage.getItem('msm_mobile_welcome_seen');
+    if (!hasSeenWelcome) {
+      setShowWelcome(true);
+
+      const timer = setTimeout(() => {
+        setIsFadingOut(true);
+        setTimeout(() => {
+          setShowWelcome(false);
+          sessionStorage.setItem('msm_mobile_welcome_seen', 'true');
+        }, 500);
+      }, 15000); // 15s auto-hide
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleDismissWelcome = () => {
+    setIsFadingOut(true);
+    setTimeout(() => {
+      setShowWelcome(false);
+      sessionStorage.setItem('msm_mobile_welcome_seen', 'true');
+    }, 500);
+  };
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const mapsUrl = rawLocation && /https?:\/\//i.test(rawLocation)
+    ? rawLocation
+    : vendorLocation
+      ? `https://maps.google.com/?q=${encodeURIComponent(vendorLocation)}`
+      : 'https://maps.google.com';
+
+  return (
+    <div className="block md:hidden w-full select-none">
+      {/* 1. Mobile Welcome Card (Auto-hides after 10s or on dismiss) */}
+      {showWelcome && (
+        <div
+          className={`w-full transition-all duration-500 ease-in-out ${
+            isFadingOut
+              ? 'max-h-0 opacity-0 overflow-hidden'
+              : 'max-h-[140px] opacity-100'
+          }`}
+        >
+          <div className="bg-[#f77512] text-center pt-3 pb-2.5 px-6 relative text-white">
+            <button
+              onClick={handleDismissWelcome}
+              className="absolute right-2 top-2 text-white/80 hover:text-white p-1 rounded-full bg-black/15 hover:bg-black/25 cursor-pointer transition-colors"
+              aria-label="Dismiss welcome card"
+            >
+              <X size={14} />
+            </button>
+            <p className="text-[13.5px] font-black tracking-tight leading-tight text-white">
+              {vendorName ? `Welcome back, ${vendorName}!` : 'Manage Your Food Business'}
+            </p>
+            <p className="text-[11px] font-bold text-white/95 mt-0.5 leading-snug">
+              Manage your menu and track today&apos;s performance.
+            </p>
+          </div>
+
+          {/* Authentic Scalloped Wavy Divider matching card background (#f77512) */}
+          <div
+            className="w-full h-2.5 bg-repeat-x bg-bottom bg-[#f77512]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10' width='20' height='10'%3E%3Cpath d='M0,10 Q10,0 20,10 Z' fill='%23fdf8f3'/%3E%3C/svg%3E")`
+            }}
+          />
+        </div>
+      )}
+
+      {/* 2. Container matching Desktop Mode color (#fdf8f3) with comfortable spacing */}
+      <div className="bg-[#fdf8f3] px-4 pt-3 pb-3 relative" ref={popoverRef}>
+        {/* Top Row: Shop Title + Location Trigger (right side of vendor name) + Profile Avatar Icon */}
+        <div className="flex items-center justify-between gap-2.5 relative z-20">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h1 className="text-[18px] sm:text-xl font-black text-[#1f114a] tracking-tight leading-tight truncate shrink-0 max-w-[130px] sm:max-w-[180px]">
+              {loading ? 'Your Shop' : vendorName || 'Your Shop'}
+            </h1>
+
+            {/* Location Trigger (Right side of vendor name) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                className="flex items-center gap-1.5 text-left focus:outline-none group max-w-full bg-orange-50/90 border border-orange-200/80 px-2.5 py-1 rounded-full shadow-xs"
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#f77512] shrink-0" strokeWidth={2.5} />
+                <span className="text-[11.5px] font-bold text-slate-700 group-hover:text-[#f77512] transition-colors truncate max-w-[120px] sm:max-w-[180px]">
+                  {vendorLocation || 'Set location'}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-gray-500 shrink-0 transition-transform duration-200 ${
+                    open ? 'rotate-180 text-[#f77512]' : ''
+                  }`}
+                  strokeWidth={2.5}
+                />
+              </button>
+
+              {/* Location Dropdown Popup (Viewport aligned on mobile, higher up) */}
+              {open && (
+                <div className="fixed left-4 right-4 top-[44px] sm:absolute sm:top-[calc(100%+8px)] sm:left-0 sm:right-auto sm:w-80 bg-white rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.2)] border border-gray-100 z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 py-3.5">
+                    <div className="flex gap-3">
+                      <div className="mt-0.5 w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                        <MapPin className="w-4 h-4 text-[#f77512]" strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-extrabold text-gray-900 leading-snug">
+                          {vendorLocation || 'Location not set'}
+                        </p>
+                        {vendorLocation && (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[12px] text-[#f77512] font-bold mt-1.5 hover:underline"
+                          >
+                            View on Google Maps
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50">
+                    <Link
+                      href="/vendor/settings"
+                      onClick={() => setOpen(false)}
+                      className="text-[12px] font-bold text-[#f77512] hover:underline"
+                    >
+                      Edit in Settings →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* User Profile Avatar Icon */}
+          <Link
+            href="/vendor/settings"
+            className="w-9 h-9 rounded-full bg-[#1f114a] text-white flex items-center justify-center shrink-0 shadow-xs border border-gray-200 hover:scale-105 transition-transform"
+          >
+            <User className="w-4.5 h-4.5 text-white" strokeWidth={2} />
+          </Link>
+        </div>
+
+        {/* Third Row: Navigation Category Tabs (4 tabs in 1 line with comfortable height) */}
+        <div className="grid grid-cols-4 gap-2 pt-3 pb-1 w-full relative z-10">
+          {CATEGORIES.map((cat) => {
+            const isActive = activeTab === cat.id;
+
+            let path = '/vendor/dashboard';
+            if (cat.id === 'menu') path = '/vendor/menu';
+            else if (cat.id === 'promotions') path = '/vendor/promotions';
+            else if (cat.id === 'qr-menu') path = '/vendor/qr';
+
+            return (
+              <Link
+                key={cat.id}
+                href={path}
+                className={`flex items-center justify-center px-1.5 py-2 rounded-xl text-[12.5px] font-bold transition-all text-center w-full min-w-0 ${
+                  isActive
+                    ? 'bg-[#f77512] text-white shadow-xs font-bold'
+                    : 'bg-white text-slate-700 border border-gray-200/90 hover:bg-slate-100'
+                }`}
+              >
+                <span className="truncate max-w-full leading-tight">{cat.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Footer: React.FC = () => {
   return (
-    <footer className="w-full border-t border-gray-200/80 bg-[#fdf8f3] py-6 px-4 mt-auto">
-      <div className="max-w-[1536px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-gray-500 font-medium px-4 md:px-8">
+    <footer className="w-full border-t border-gray-200/80 bg-[#fdf8f3] py-2.5 sm:py-3 md:py-4 px-3 sm:px-6 md:px-8 mt-auto">
+      <div className="max-w-[1536px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2 text-[11px] sm:text-xs md:text-sm text-gray-500 font-medium">
         <p>© {new Date().getFullYear()} MyStreetMenu. All rights reserved.</p>
         <p className="flex items-center gap-1">
           Copyright by{' '}
@@ -351,16 +550,24 @@ export default function Layout({ children }: LayoutProps) {
         `}} />
 
         {/* Sticky Header & Category Navigation Wrapper */}
-        <div className="sticky top-0 z-50 bg-[#fdf8f3] shadow-xs">
-          <Header />
-          <CategoryNav activeTab={activeTab} />
+        <div className="sticky top-0 z-50 bg-[#fdf8f3] md:shadow-xs shadow-none">
+          {/* Desktop Header (Unchanged) */}
+          <div className="hidden md:block">
+            <Header />
+            <CategoryNav activeTab={activeTab} />
+          </div>
+
+          {/* Mobile Header (Zepto UI matching reference image) */}
+          <div className="block md:hidden">
+            <MobileVendorHeader activeTab={activeTab} />
+          </div>
         </div>
 
-        <main className="w-full flex-1 min-h-[calc(100vh-136px)]">
+        <main className="w-full flex-1 min-h-0">
           {currentSubNav.length > 0 ? (
-            <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 md:pt-6 pb-10 flex flex-col md:flex-row gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
-              {/* Left Sub-Navigation */}
-              <div className="w-full md:w-[240px] shrink-0 flex flex-col gap-4 lg:ml-12 mt-2 md:sticky md:top-[155px]">
+            <div className="max-w-[1536px] mx-auto px-2 sm:px-4 md:px-8 pt-3 md:pt-6 pb-10 flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
+              {/* Left/Top Sub-Navigation */}
+              <div className="w-full md:w-[240px] shrink-0 flex flex-row items-center justify-center md:justify-start gap-1 sm:gap-2.5 md:gap-4 max-w-full md:max-w-none mx-auto md:mx-0 md:flex-col lg:ml-12 mt-1 md:mt-2 md:sticky md:top-[155px]">
                 {currentSubNav.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeSubTab === item.id;
@@ -368,19 +575,19 @@ export default function Layout({ children }: LayoutProps) {
                     <button
                       key={item.id}
                       onClick={() => handleSubTabChange(item.id)}
-                      className={`relative flex items-center gap-4 text-left transition-all duration-150 group py-2.5 px-3.5 rounded-xl cursor-pointer ${
+                      className={`relative flex-1 md:flex-initial flex items-center justify-center md:justify-start gap-1 sm:gap-2 md:gap-3.5 text-center md:text-left transition-all duration-200 group py-2 px-1 xs:px-2 sm:px-3 md:py-3 md:px-4 rounded-lg sm:rounded-xl md:rounded-2xl cursor-pointer whitespace-nowrap min-w-0 md:w-full ${
                         isActive
-                          ? 'bg-orange-100/80 text-[#f77512] font-semibold'
-                          : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/60'
+                          ? 'bg-[#FFEAD8] text-[#f77512] font-extrabold border border-orange-200/80 shadow-2xs'
+                          : 'bg-white text-[#3d3d3d] font-bold border border-gray-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
                       }`}
                     >
                       <Icon
-                        className={`w-[22px] h-[22px] ${isActive ? 'text-[#f77512]' : 'text-gray-500 group-hover:text-gray-700'}`}
-                        strokeWidth={1.5}
+                        className={`w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 md:w-[22px] md:h-[22px] shrink-0 ${isActive ? 'text-[#f77512]' : 'text-gray-500 group-hover:text-gray-700'}`}
+                        strokeWidth={2}
                       />
-                      <span className={`text-[15px] font-medium ${isActive
-                        ? 'text-[#f77512] font-bold'
-                        : 'text-gray-600 group-hover:text-gray-800'
+                      <span className={`text-[11px] sm:text-[13px] md:text-[15px] truncate sm:whitespace-nowrap ${isActive
+                        ? 'text-[#f77512] font-black'
+                        : 'text-[#3d3d3d] font-extrabold group-hover:text-slate-900'
                         }`}>
                         {item.label}
                       </span>
@@ -408,3 +615,4 @@ export default function Layout({ children }: LayoutProps) {
     </VendorProvider>
   );
 }
+

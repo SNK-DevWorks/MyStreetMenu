@@ -41,9 +41,9 @@ export const SettingsSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTa
   };
 
   return (
-    <div className="w-[300px] flex-shrink-0 flex flex-col bg-white border-r border-gray-200 h-full">
+    <div className="w-full md:w-[300px] shrink-0 flex flex-col bg-white border-r border-gray-200 h-full">
       {/* User Profile Info */}
-      <div className="p-6 flex items-center gap-4">
+      <div className="p-4 sm:p-6 flex items-center gap-4">
         {/* Avatar */}
         {loading ? (
           <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse shrink-0" />
@@ -78,8 +78,8 @@ export const SettingsSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTa
       </div>
 
       {/* Active Subscription Card */}
-      <div className="px-6 pb-6">
-        <div className="bg-[#fdf8f3] border border-gray-200 rounded-xl overflow-hidden p-4">
+      <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+        <div className="bg-[#fdf8f3] border border-gray-200 rounded-xl overflow-hidden p-3.5 sm:p-4">
           <div className="flex items-start justify-between">
             <div className="flex flex-col">
               <span className="text-[14px] font-bold text-[#1a1a1a]">MyStreetMenu</span>
@@ -89,7 +89,7 @@ export const SettingsSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTa
               ACTIVE
             </span>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center cursor-pointer group">
+          <div className="mt-3 sm:mt-4 pt-3 border-t border-gray-200 flex justify-between items-center cursor-pointer group">
             <span className="text-[13px] font-semibold text-[#1a1a1a] group-hover:text-[#f67412] transition-colors">
               Manage Subscription
             </span>
@@ -107,21 +107,24 @@ export const SettingsSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTa
               key={id}
               type="button"
               onClick={() => setActiveTab(id)}
-              className={`w-full flex items-center gap-4 px-3.5 py-3.5 rounded-xl cursor-pointer transition-all text-left focus:outline-none focus:ring-0 outline-none select-none ${
+              className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-xl cursor-pointer transition-all text-left focus:outline-none focus:ring-0 outline-none select-none ${
                 isActive
                   ? 'bg-[#fdf8f3] text-[#f67412] font-bold border border-orange-200/70 shadow-xs'
                   : 'text-[#1a1a1a] hover:bg-[#fdf8f3]/60 font-medium border border-transparent'
               }`}
             >
-              <Icon size={20} className={isActive ? 'text-[#f67412] shrink-0' : 'text-[#1a1a1a] shrink-0'} />
-              <span className="text-[14px]">{label}</span>
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Icon size={20} className={isActive ? 'text-[#f67412] shrink-0' : 'text-[#1a1a1a] shrink-0'} />
+                <span className="text-[14px] truncate">{label}</span>
+              </div>
+              <ChevronRight size={18} className={`shrink-0 transition-transform ${isActive ? 'text-[#f67412]' : 'text-gray-400'}`} />
             </button>
           );
         })}
       </nav>
 
       {/* Logout and Logo */}
-      <div className="p-6 flex flex-col items-center justify-center mt-auto">
+      <div className="p-4 sm:p-6 flex flex-col items-center justify-center mt-4 sm:mt-auto">
         <button
           type="button"
           onClick={handleLogout}
@@ -137,7 +140,7 @@ export const SettingsSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTa
             </>
           )}
         </button>
-        <div className="mt-6 flex items-center justify-center">
+        <div className="mt-4 sm:mt-6 flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/text-logo.png" alt="MyStreetMenu" className="h-7 w-auto object-contain" />
         </div>

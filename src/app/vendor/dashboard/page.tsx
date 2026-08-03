@@ -40,12 +40,12 @@ export default function VendorDashboardPage() {
   };
 
   return (
-    <div className="max-w-[1536px] mx-auto px-4 md:px-8 pt-4 pb-12 flex flex-col items-center animate-in fade-in duration-200">
+    <div className="max-w-[1536px] mx-auto px-3 sm:px-4 md:px-8 pt-2 sm:pt-4 pb-12 flex flex-col items-center animate-in fade-in duration-200">
       
       {/* Welcome Card — Only visible on login/signup for 15 seconds */}
       {showWelcomeCard && (
         <div
-          className={`w-full flex justify-center transition-all duration-500 ease-in-out ${
+          className={`w-full hidden md:flex justify-center transition-all duration-500 ease-in-out ${
             isFadingOut
               ? 'opacity-0 max-h-0 -translate-y-4 overflow-hidden mb-0'
               : 'opacity-100 max-h-[400px] translate-y-0 mb-2'
@@ -61,7 +61,7 @@ export default function VendorDashboardPage() {
 
       <StatsCards />
       <QuickActionsRow />
-      <TodaysSpecialsSection className="mt-24 sm:mt-32" />
+      <TodaysSpecialsSection className="mt-10 sm:mt-16 md:mt-24" />
       <Item items={[]} />
     </div>
   );

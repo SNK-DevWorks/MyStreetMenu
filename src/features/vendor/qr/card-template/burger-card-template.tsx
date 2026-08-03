@@ -380,17 +380,17 @@ export default function BurgerCardTemplate({
   }, [publicMenuUrl]);
 
   return (
-    <div className="w-full flex flex-col items-start select-none pt-0 pb-2">
+    <div className="w-full flex flex-col items-center sm:items-start select-none pt-0 pb-2">
 
       {/* ── Full Styled Card ── */}
       <div
         id="burger-qr-card"
-        className="relative w-full max-w-[380px] bg-white rounded-[28px] shadow-2xl border border-gray-200/80 overflow-hidden"
+        className="relative w-full max-w-[310px] xs:max-w-[340px] sm:max-w-[380px] bg-white rounded-[22px] sm:rounded-[28px] shadow-xl sm:shadow-2xl border border-gray-200/80 overflow-hidden"
         style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08)' }}
       >
         {/* Top Orange Gradient Banner Header */}
         <div
-          className="relative flex flex-col items-center justify-center py-6 px-4 overflow-hidden text-center"
+          className="relative flex flex-col items-center justify-center py-4 sm:py-6 px-4 overflow-hidden text-center"
           style={{ background: `linear-gradient(135deg, ${accentColor}, #c95e00)` }}
         >
           <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 bg-white" />
@@ -400,21 +400,21 @@ export default function BurgerCardTemplate({
           <img
             src="/text-logo.png"
             alt="MyStreetMenu"
-            className="h-9 object-contain brightness-0 invert z-10 drop-shadow-xs"
+            className="h-7 sm:h-9 object-contain brightness-0 invert z-10 drop-shadow-xs"
           />
-          <span className="relative text-white/80 text-[13px] font-medium mt-0.5 z-10">
+          <span className="relative text-white/80 text-[11px] sm:text-[13px] font-medium mt-0.5 z-10">
             Scan to view our menu
           </span>
         </div>
 
         {/* Card Content Body */}
-        <div className="flex flex-col items-center px-6 pt-5 pb-7 gap-5">
+        <div className="flex flex-col items-center px-3.5 sm:px-6 pt-3.5 sm:pt-5 pb-5 sm:pb-7 gap-3 sm:gap-5">
 
           {/* Burger QR Graphic with rounded corners */}
-          <div className="relative w-[335px] h-[425px] rounded-[24px] overflow-hidden flex items-center justify-center bg-white">
+          <div className="relative w-[270px] h-[340px] xs:w-[295px] xs:h-[375px] sm:w-[335px] sm:h-[425px] rounded-[18px] sm:rounded-[24px] overflow-hidden flex items-center justify-center bg-white">
             {/* Skeleton shimmer while image loads */}
             {!templateImgLoaded && (
-              <div className="absolute inset-0 bg-gray-100 animate-pulse rounded-[24px]" />
+              <div className="absolute inset-0 bg-gray-100 animate-pulse rounded-[18px] sm:rounded-[24px]" />
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -519,23 +519,23 @@ export default function BurgerCardTemplate({
           </div>
 
           {/* Vendor Name */}
-          <div className="flex flex-col items-center justify-center text-center -mt-2">
-            <p className="text-[24px] font-black text-slate-900 tracking-tight">{vendorName}</p>
+          <div className="flex flex-col items-center justify-center text-center -mt-1 sm:-mt-2">
+            <p className="text-[20px] sm:text-[24px] font-black text-slate-900 tracking-tight">{vendorName}</p>
           </div>
 
         </div>
       </div>
 
       {/* Action Buttons Below Card */}
-      <div className="grid grid-cols-3 gap-2.5 w-full max-w-[380px] mt-6">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full max-w-[310px] xs:max-w-[340px] sm:max-w-[380px] mt-4 sm:mt-6">
         <button
           id="qr-share"
           type="button"
           onClick={handleShare}
-          className="flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
+          className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:py-3 sm:px-1.5 rounded-xl sm:rounded-2xl border-2 font-bold text-[11px] sm:text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
           style={{ borderColor: '#e2e8f0' }}
         >
-          <Share2 className="w-4 h-4 text-slate-600" strokeWidth={2} />
+          <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" strokeWidth={2} />
           <span className="whitespace-nowrap">{shared ? 'Copied!' : 'Share'}</span>
         </button>
 
@@ -543,11 +543,11 @@ export default function BurgerCardTemplate({
           id="qr-download-only"
           type="button"
           onClick={handleDownloadQrOnly}
-          className="flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
+          className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:py-3 sm:px-1.5 rounded-xl sm:rounded-2xl border-2 font-bold text-[11px] sm:text-xs transition-all active:scale-95 cursor-pointer shadow-2xs bg-white text-slate-700 hover:bg-slate-50"
           style={{ borderColor: '#e2e8f0' }}
           title="Download standalone high-resolution QR image"
         >
-          <QrCode className="w-4 h-4 text-slate-600" strokeWidth={2} />
+          <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" strokeWidth={2} />
           <span className="whitespace-nowrap">Download QR</span>
         </button>
 
@@ -556,12 +556,12 @@ export default function BurgerCardTemplate({
           type="button"
           onClick={handleDownload}
           disabled={downloading}
-          className="flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-2xl font-extrabold text-xs text-white transition-all active:scale-95 cursor-pointer disabled:opacity-70 shadow-md hover:shadow-lg shrink-0"
+          className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:py-3 sm:px-1.5 rounded-xl sm:rounded-2xl font-extrabold text-[11px] sm:text-xs text-white transition-all active:scale-95 cursor-pointer disabled:opacity-70 shadow-md hover:shadow-lg shrink-0"
           style={{
             background: `linear-gradient(135deg, ${accentColor}, #c95e00)`,
           }}
         >
-          <Download className="w-4 h-4" strokeWidth={2.5} />
+          <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
           <span className="whitespace-nowrap">{downloading ? 'Saving…' : 'Download Card'}</span>
         </button>
       </div>

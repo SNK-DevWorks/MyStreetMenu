@@ -128,8 +128,8 @@ export default function HomePage() {
       </main>
 
       {/* Text-only Bottom Footer */}
-      <footer className="shrink-0 py-4 px-8 sm:px-12 lg:px-16 border-t border-gray-200/80 bg-[#fafafa] z-20">
-        <div className="max-w-[1440px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-gray-500">
+      <footer className="shrink-0 py-2.5 sm:py-3.5 px-4 sm:px-8 lg:px-16 border-t border-gray-200/80 bg-[#fafafa] z-20">
+        <div className="max-w-[1440px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2 text-[11px] sm:text-xs md:text-sm text-gray-500">
           <div>© 2026 MyStreetMenu. All rights reserved.</div>
           <div>
             Copyright by{" "}

@@ -5,6 +5,15 @@ import { getMenuImage } from '@/lib/images';
 export const PUBLISHED_IMAGE_FALLBACK =
   'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2080&auto=format&fit=crop';
 
+export interface PublicMenuPromotion {
+  id: string;
+  type: 'announcement' | 'offer' | 'todays_special';
+  title: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface PublicMenuViewModel {
   vendorName: string;
   vendorAddress: string;
@@ -13,6 +22,7 @@ export interface PublicMenuViewModel {
   mapUrl: string | null;
   items: FoodCardItem[];
   categories: string[];
+  announcements: PublicMenuPromotion[];
   /** Passed to AnalyticsProvider — not rendered */
   menuVersion: number;
   publishedAt: string;
@@ -43,6 +53,15 @@ export function publishedMenuAdapter(menu: PublishedMenu): PublicMenuViewModel {
       .map((item) => fromPublishedItem(item, cat.name))
   );
 
+  const announcements: PublicMenuPromotion[] = (menu.promotions || []).map((p) => ({
+    id: p.id,
+    type: (p.type as 'announcement' | 'offer' | 'todays_special') || 'announcement',
+    title: p.title,
+    description: p.description ?? undefined,
+    startDate: p.startDate ?? undefined,
+    endDate: p.endDate ?? undefined,
+  }));
+
   return {
     vendorName: menu.shop.name,
     vendorAddress: menu.shop.address ?? '',
@@ -51,6 +70,7 @@ export function publishedMenuAdapter(menu: PublishedMenu): PublicMenuViewModel {
     mapUrl: menu.shop.mapUrl,
     items,
     categories: ['All', ...menu.categories.filter((c) => c.items.length > 0).map((c) => c.name)],
+    announcements,
     menuVersion: menu.version,
     publishedAt: menu.publishedAt,
   };

@@ -222,36 +222,35 @@ export default function OffersSection() {
   };
 
   return (
-    <div className="w-full max-w-[1200px] mt-4 flex flex-col gap-6 animate-in fade-in duration-200">
+    <div className="w-full max-w-[1200px] mt-1 sm:mt-4 flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-200">
 
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed top-24 right-6 z-[200] px-5 py-3 rounded-2xl shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200 ${toast.type === 'success'
-            ? 'bg-slate-900 text-white border-slate-700'
-            : 'bg-rose-900 text-white border-rose-700'
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-full shadow-2xl border flex items-center justify-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200 whitespace-nowrap max-w-[90vw] text-center text-xs sm:text-sm font-bold ${
+            toast.type === 'success'
+              ? 'bg-slate-900 text-white border-slate-700/80'
+              : 'bg-rose-900 text-white border-rose-700/80'
           }`}
         >
-          <span className="text-sm font-bold">{toast.message}</span>
+          <span>{toast.message}</span>
         </div>
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-[2rem] border border-gray-200/80 shadow-sm">
-        <div className="flex items-center gap-4">
-          <OfferIcon className="w-10 h-10 shrink-0" />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Offers</h1>
-          </div>
+      <div className="flex items-center justify-between gap-3 bg-white p-3.5 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] border border-gray-200/80 shadow-xs sm:shadow-sm">
+        <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+          <OfferIcon className="w-7 h-7 sm:w-10 sm:h-10 shrink-0" />
+          <h1 className="text-lg sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight truncate">Offers</h1>
         </div>
 
         <button
           type="button"
           onClick={handleOpenCreateModal}
-          className="flex items-center justify-center gap-2 bg-[#f77512] hover:bg-[#e05a00] text-white font-black px-6 py-3 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-95 text-sm cursor-pointer shrink-0"
+          className="flex items-center justify-center gap-1.5 bg-[#f77512] hover:bg-[#e05a00] text-white font-black px-3.5 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:shadow-md active:scale-95 text-xs sm:text-sm cursor-pointer shrink-0 whitespace-nowrap"
         >
-          <Plus size={18} strokeWidth={2.5} />
-          Create Offer
+          <Plus size={16} strokeWidth={2.5} className="shrink-0" />
+          <span>Create Offer</span>
         </button>
       </div>
 
@@ -260,9 +259,9 @@ export default function OffersSection() {
       {/* Active Offers Section */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
             Active Offers
-            <span className="bg-orange-100 text-[#f77512] text-xs font-black px-2.5 py-0.5 rounded-full border border-orange-200">
+            <span className="bg-orange-100 text-[#f77512] text-[10px] sm:text-xs font-black px-2 sm:px-2.5 py-0.5 rounded-full border border-orange-200">
               {offers.filter(o => o.isActive).length} Active
             </span>
           </h2>
@@ -273,25 +272,25 @@ export default function OffersSection() {
             <Loader2 size={32} className="animate-spin text-[#f77512]" />
           </div>
         ) : offers.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-gray-200/80 flex flex-col items-center justify-center min-h-[220px]">
-            <OfferIcon className="w-14 h-14 mb-3" />
-            <h3 className="text-base font-bold text-slate-800 mb-4">No Offers Available</h3>
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center border border-gray-200/80 flex flex-col items-center justify-center min-h-[160px] sm:min-h-[220px]">
+            <OfferIcon className="w-10 h-10 sm:w-14 sm:h-14 mb-2 sm:mb-3" />
+            <h3 className="text-sm sm:text-base font-bold text-slate-800 mb-3 sm:mb-4">No Offers Available</h3>
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className="bg-[#f77512] hover:bg-[#e05a00] text-white font-bold px-5 py-2.5 rounded-2xl transition-all shadow-md flex items-center gap-2 text-xs cursor-pointer"
+              className="bg-[#f77512] hover:bg-[#e05a00] text-white font-bold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all shadow-md flex items-center gap-1.5 sm:gap-2 text-xs cursor-pointer"
             >
-              <Plus size={16} /> Create Offer
+              <Plus size={15} /> Create Offer
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
             {offers.map((offer, idx) => {
               const theme = CARD_COLOR_PALETTES[idx % CARD_COLOR_PALETTES.length];
               return (
                 <div
                   key={offer.id}
-                  className={`relative w-full min-h-[185px] rounded-2xl ${theme.bg} shadow-sm overflow-hidden flex flex-col justify-between p-5 sm:p-6 border transition-all duration-200 ${
+                  className={`relative w-full min-h-[160px] sm:min-h-[185px] rounded-xl sm:rounded-2xl ${theme.bg} shadow-sm overflow-hidden flex flex-col justify-between p-4 sm:p-6 border transition-all duration-200 ${
                     offer.isActive
                       ? `${theme.border} hover:shadow-md`
                       : 'border-gray-300/80 opacity-40 grayscale-[60%]'
@@ -307,45 +306,45 @@ export default function OffersSection() {
 
                   {/* Content Section */}
                   <div className="flex flex-col z-10 w-[68%] sm:w-[65%] gap-1">
-                    <h2 className={`text-xl sm:text-2xl font-black ${theme.title} leading-tight mb-2 drop-shadow-2xs`}>
+                    <h2 className={`text-lg sm:text-2xl font-black ${theme.title} leading-tight mb-1.5 sm:mb-2 drop-shadow-2xs`}>
                       {offer.title}
                     </h2>
 
                     {offer.description && (
-                      <p className={`text-xs sm:text-sm ${theme.desc} font-semibold leading-relaxed mb-3`}>
+                      <p className={`text-xs sm:text-sm ${theme.desc} font-semibold leading-relaxed mb-2.5 sm:mb-3`}>
                         {offer.description}
                       </p>
                     )}
 
                     {offer.endDate && (
-                      <div className="mb-3">
-                        <span className={`text-xs sm:text-sm font-bold ${theme.badgeText} ${theme.badgeBg} backdrop-blur-md px-3 py-1 rounded-lg inline-block shadow-2xs`}>
+                      <div className="mb-2 sm:mb-3">
+                        <span className={`text-[11px] sm:text-sm font-bold ${theme.badgeText} ${theme.badgeBg} backdrop-blur-md px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg inline-block shadow-2xs`}>
                           Valid Until <strong className={`${theme.badgeStrong} font-black`}>{formatEndDate(offer.endDate)}</strong>
                         </span>
                       </div>
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2 pt-1.5 z-20">
+                    <div className="flex items-center gap-1.5 sm:gap-2 pt-1 z-20 flex-wrap sm:flex-nowrap">
                       <button
                         type="button"
                         onClick={() => handleOpenEditModal(offer)}
-                        className={`${theme.btnBg} ${theme.btnHover} ${theme.btnText} text-xs sm:text-sm font-extrabold py-2 px-4 rounded-full flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer`}
+                        className={`${theme.btnBg} ${theme.btnHover} ${theme.btnText} text-xs font-extrabold py-1.5 px-3 sm:py-2 sm:px-4 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-sm transition-colors cursor-pointer`}
                       >
-                        <Edit3 size={14} className={theme.btnText} /> Edit
+                        <Edit3 size={13} className={theme.btnText} /> Edit
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(offer)}
                         disabled={isSaving}
-                        className={`text-xs sm:text-sm font-extrabold py-2 px-4 rounded-full flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer ${
+                        className={`text-xs font-extrabold py-1.5 px-3 sm:py-2 sm:px-4 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-sm transition-colors cursor-pointer ${
                           offer.isActive
                             ? 'bg-black/10 text-slate-900 hover:bg-black/20'
                             : 'bg-emerald-600 text-white hover:bg-emerald-700'
                         }`}
                       >
-                        <Power size={14} /> {offer.isActive ? 'Disable' : 'Enable'}
+                        <Power size={13} /> {offer.isActive ? 'Disable' : 'Enable'}
                       </button>
 
                       <button
@@ -354,10 +353,10 @@ export default function OffersSection() {
                           if (confirm(`Delete "${offer.title}"?`)) handleDeleteOffer(offer.id);
                         }}
                         disabled={isDeleting}
-                        className={`p-2 ${theme.btnText} hover:text-red-600 hover:bg-white/80 rounded-full transition-colors cursor-pointer`}
+                        className={`p-1.5 ${theme.btnText} hover:text-red-600 hover:bg-white/80 rounded-full transition-colors cursor-pointer`}
                         title="Delete offer"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>

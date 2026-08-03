@@ -44,6 +44,7 @@ export default async function MenuSlugPage({
         mapUrl={viewModel.mapUrl}
         items={viewModel.items}
         categories={viewModel.categories}
+        announcements={viewModel.announcements}
       />
     </AnalyticsProvider>
   );
