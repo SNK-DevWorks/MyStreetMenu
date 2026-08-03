@@ -40,6 +40,8 @@ export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [rawLocation, setRawLocation] = useState<string>('');
   const [publicMenuUrl, setPublicMenuUrl] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  // Tracks whether the very first load attempt has completed (success OR failure)
+  const [bootstrapDone, setBootstrapDone] = useState<boolean>(false);
 
   // Menu State
   const [categories, setCategories] = useState<Category[]>([]);
@@ -78,27 +80,36 @@ export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setOffers(offerList);
         setAnnouncements(annList);
       } else {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const name =
-            user.user_metadata?.shop_name ||
-            user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            user.email?.split('@')[0] ||
-            'Your Shop';
-          const raw =
-            user.user_metadata?.address ||
-            user.user_metadata?.location ||
-            user.user_metadata?.shop_address ||
-            '';
-          const slug = user.user_metadata?.slug || 'my-street-menu-demo';
+        // API returned an error response — try to hydrate display-only info from
+        // the Supabase auth session so the header/name still renders. The shop
+        // will be null (no DB row), so menu management will show an empty state
+        // instead of a skeleton that never resolves.
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const name =
+              user.user_metadata?.shop_name ||
+              user.user_metadata?.full_name ||
+              user.user_metadata?.name ||
+              user.email?.split('@')[0] ||
+              'Your Shop';
+            const raw =
+              user.user_metadata?.address ||
+              user.user_metadata?.location ||
+              user.user_metadata?.shop_address ||
+              '';
+            const slug = user.user_metadata?.slug || 'my-street-menu-demo';
 
-          setVendorName(name);
-          setRawLocation(raw);
-          setVendorLocation(user.user_metadata?.address || raw);
-          setPublicMenuUrl(`${origin}/menu/${slug}`);
-        } else {
+            setVendorName(name);
+            setRawLocation(raw);
+            setVendorLocation(user.user_metadata?.address || raw);
+            setPublicMenuUrl(`${origin}/menu/${slug}`);
+          } else {
+            setPublicMenuUrl(`${origin}/menu/my-street-menu-demo`);
+          }
+        } catch (authErr) {
+          console.error('Failed to get fallback user info:', authErr);
           setPublicMenuUrl(`${origin}/menu/my-street-menu-demo`);
         }
       }
@@ -108,6 +119,8 @@ export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(false);
       setMenuLoading(false);
       setPromotionsLoading(false);
+      // Always mark bootstrap as done so consumers never stay stuck in skeleton
+      setBootstrapDone(true);
     }
   }, []);
 
@@ -156,7 +169,8 @@ export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         refetchShop,
         categories,
         dbItems,
-        menuLoading,
+        // menuLoading is false once the first fetch attempt finishes (success or fail)
+        menuLoading: menuLoading && !bootstrapDone,
         refetchMenu,
         offers,
         announcements,

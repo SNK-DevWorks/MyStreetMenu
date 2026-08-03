@@ -106,7 +106,7 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 // ——— Main Component ———————————————————————————————————————————————————————————
 
 export default function MenuManagement() {
-  const { shop: contextShop, categories: contextCategories, dbItems: contextDbItems, refetchMenu } = useVendor();
+  const { shop: contextShop, categories: contextCategories, dbItems: contextDbItems, menuLoading: contextMenuLoading, refetchMenu } = useVendor();
 
   // ——— Data state —————————————————————————————————————————————————————————————
   const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -164,15 +164,28 @@ export default function MenuManagement() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Sync state with context
+  // Sync state with context.
+  // IMPORTANT: We must stop showing the skeleton (setIsBootstrapping(false)) even
+  // when contextShop is null — this happens when the API call fails on first load
+  // (network error, timeout, etc.). We use !contextMenuLoading as the signal that
+  // the context fetch has finished (success OR failure).
   useEffect(() => {
     if (contextShop) {
       setShop(contextShop);
       setCategories(contextCategories);
       setDbItems(contextDbItems);
-      setIsBootstrapping(false);
+      setBootstrapError(null);
     }
-  }, [contextShop, contextCategories, contextDbItems]);
+    // Once context is done loading (regardless of success), stop bootstrapping
+    if (!contextMenuLoading) {
+      setIsBootstrapping(false);
+      // If loading finished but we still have no shop, the API call failed.
+      // Show a retry-able error instead of an empty broken page.
+      if (!contextShop) {
+        setBootstrapError('Could not load your menu data. Please check your connection and try again.');
+      }
+    }
+  }, [contextShop, contextCategories, contextDbItems, contextMenuLoading]);
 
   // ——— Body scroll lock when modal open ———————————————————————————————————————
   useEffect(() => {
@@ -871,7 +884,7 @@ export default function MenuManagement() {
         <h2 className="text-2xl font-black text-slate-800">Something went wrong</h2>
         <p className="text-slate-500 max-w-sm">{bootstrapError}</p>
         <button
-          onClick={() => refetchMenu()}
+          onClick={() => window.location.reload()}
           className="flex items-center gap-2 bg-[#f77512] text-white font-bold px-6 py-3 rounded-2xl hover:bg-[#e05a00] transition-colors cursor-pointer"
         >
           <RefreshCw size={16} /> Retry
