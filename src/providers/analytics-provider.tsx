@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useRef, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useRef, useEffect, useCallback, useState } from 'react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,6 +25,41 @@ interface QueuedEvent {
 
 interface AnalyticsContextValue {
   track: (eventType: PublicEventType, metadata?: Record<string, unknown>) => void;
+  visitorId: string;
+  isLiked: (itemId: string) => boolean;
+  getLikeCount: (itemId: string) => number;
+  isLikePending: (itemId: string) => boolean;
+  likeMenuItem: (itemId: string) => Promise<void>;
+}
+
+// ─── Shop-Scoped Social Storage Helpers ────────────────────────────────────────
+
+function getLocalLikedItems(shopId: string): Set<string> {
+  if (typeof window === 'undefined' || !shopId) return new Set();
+  try {
+    const raw = localStorage.getItem(`msm_liked_items_${shopId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { shopId?: string; likedItems?: string[] };
+      if (Array.isArray(parsed.likedItems)) {
+        return new Set(parsed.likedItems);
+      }
+    }
+  } catch {}
+  return new Set();
+}
+
+function setLocalLikedItems(shopId: string, set: Set<string>): void {
+  if (typeof window === 'undefined' || !shopId) return;
+  try {
+    localStorage.setItem(
+      `msm_liked_items_${shopId}`,
+      JSON.stringify({
+        shopId,
+        likedItems: Array.from(set),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+  } catch {}
 }
 
 // ─── Event Category Constants ──────────────────────────────────────────────────
@@ -36,11 +71,24 @@ interface AnalyticsContextValue {
 const UNIQUE_EVENT_TYPES = new Set<PublicEventType>(['menu_view', 'item_view', 'qr_scan']);
 // Count Events (whatsapp_click, direction_click, share_click, like_click) skip dedup entirely.
 
+/**
+ * HIGH-PRIORITY events: flush immediately after queuing (no batching delay).
+ * These are low-frequency, high-value events that must not be lost.
+ */
+const IMMEDIATE_FLUSH_EVENTS = new Set<PublicEventType>([
+  'qr_scan',
+  'share_click',
+  'whatsapp_click',
+  'direction_click',
+  'like_click',
+  'menu_view',
+]);
+
 // ─── Bot Detection ─────────────────────────────────────────────────────────────
 
 const BOT_UA_PATTERNS = [
   /googlebot/i, /bingbot/i, /facebookexternalhit/i, /slackbot/i,
-  /discordbot/i, /whatsapp/i, /twitterbot/i, /applebot/i,
+  /discordbot/i, /twitterbot/i, /applebot/i,
 ];
 
 function isBot(): boolean {
@@ -166,10 +214,23 @@ function drainDLQ(): void {
   } catch {}
 }
 
+/**
+ * sendWithBeacon — uses sendBeacon for page-unload flushes.
+ * sendBeacon content-type is text/plain but our route.ts handles that.
+ */
+function sendWithBeacon(payload: string): boolean {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      return navigator.sendBeacon(BATCH_ENDPOINT, payload);
+    }
+  } catch {}
+  return false;
+}
+
 async function flushWithRetry(payload: string, useBeacon = false): Promise<void> {
-  if (useBeacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
-    navigator.sendBeacon(BATCH_ENDPOINT, payload);
-    return;
+  if (useBeacon) {
+    // Try beacon first (survives page close), fall through to fetch if unavailable
+    if (sendWithBeacon(payload)) return;
   }
   try {
     await fetch(BATCH_ENDPOINT, {
@@ -202,8 +263,10 @@ interface AnalyticsProviderProps {
   publishedAt: string;
 }
 
-const FLUSH_INTERVAL_MS = 30_000; // 30 seconds
-const FLUSH_THRESHOLD   = 10;     // flush immediately when 10 events accumulate
+// Periodic flush for item_view events that accumulate during long browsing sessions
+const FLUSH_INTERVAL_MS = 15_000; // 15 seconds (reduced from 30s)
+// Immediate flush threshold — low so we don't lose events if page closes quickly
+const FLUSH_THRESHOLD   = 3;      // flush after just 3 events (reduced from 10)
 
 export function AnalyticsProvider({
   children,
@@ -238,7 +301,7 @@ export function AnalyticsProvider({
     flushWithRetry(payload, useBeacon);
   }, []);
 
-  // ── Periodic flush ─────────────────────────────────────────────────────────
+  // ── Periodic flush (for item_view events that don't trigger immediate flush)
 
   useEffect(() => {
     if (botRef.current) return;
@@ -246,7 +309,7 @@ export function AnalyticsProvider({
     return () => clearInterval(id);
   }, [flush]);
 
-  // ── Flush on tab hide (tab close, navigate away) ───────────────────────────
+  // ── Flush on tab hide (visibilitychange) ──────────────────────────────────
 
   useEffect(() => {
     if (botRef.current) return;
@@ -255,6 +318,15 @@ export function AnalyticsProvider({
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [flush]);
+
+  // ── Flush on pagehide (PWA / iOS Safari — more reliable than visibilitychange)
+
+  useEffect(() => {
+    if (botRef.current) return;
+    const onPageHide = () => flush(true);
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
   }, [flush]);
 
   // ── track() ───────────────────────────────────────────────────────────────
@@ -299,6 +371,15 @@ export function AnalyticsProvider({
 
       bufferRef.current.push(event);
 
+      // ── Immediate flush for high-priority events ───────────────────────
+      // qr_scan, share_click, whatsapp_click, direction_click, like_click, menu_view
+      // are all sent immediately without any batching delay.
+      if (IMMEDIATE_FLUSH_EVENTS.has(eventType)) {
+        flush(false);
+        return;
+      }
+
+      // ── Threshold flush for accumulating events (item_view) ───────────
       if (bufferRef.current.length >= FLUSH_THRESHOLD) {
         flush(false);
       }
@@ -306,8 +387,211 @@ export function AnalyticsProvider({
     [shopId, menuVersion, publishedAt, flush],
   );
 
+  // ─── Social Likes Shared State Management ───────────────────────────────
+
+  const [mounted, setMounted] = useState(false);
+  const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [pendingLikes, setPendingLikes] = useState<Set<string>>(new Set());
+
+  // Hydrate local storage on client mount (prevents SSR hydration mismatch)
+  useEffect(() => {
+    setMounted(true);
+    if (!shopId) return;
+    const local = getLocalLikedItems(shopId);
+    if (local.size > 0) {
+      setLikedItems((prev: Set<string>) => {
+        const merged = new Set<string>(prev);
+        local.forEach((id: string) => merged.add(id));
+        return merged;
+      });
+    }
+  }, [shopId]);
+
+  // Fetch initial public social snapshot (live counts + server-verified likedItems)
+  useEffect(() => {
+    if (!shopId || botRef.current) return;
+    const vid = visitorIdRef.current;
+    const url = `/api/menu/social?shopId=${encodeURIComponent(shopId)}${vid ? `&visitorId=${encodeURIComponent(vid)}` : ''}`;
+
+    fetch(url)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        if (data.likeCounts) {
+          setLikeCounts(data.likeCounts);
+        }
+        if (Array.isArray(data.likedItems) && data.likedItems.length > 0) {
+          setLikedItems((prev: Set<string>) => {
+            const merged = new Set<string>(prev);
+            data.likedItems.forEach((id: string) => merged.add(id));
+            setLocalLikedItems(shopId, merged);
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  }, [shopId]);
+
+  const isLiked = useCallback(
+    (itemId: string) => {
+      if (!mounted) return false;
+      return likedItems.has(itemId);
+    },
+    [mounted, likedItems]
+  );
+
+  const getLikeCount = useCallback((itemId: string) => likeCounts[itemId] ?? 0, [likeCounts]);
+
+  const isLikePending = useCallback((itemId: string) => pendingLikes.has(itemId), [pendingLikes]);
+
+  const likeMenuItem = useCallback(
+    async (itemId: string) => {
+      if (!itemId || !shopId) return;
+      if (pendingLikes.has(itemId)) return;
+
+      const currentlyLiked = likedItems.has(itemId);
+
+      // Lock pending state
+      setPendingLikes((prev: Set<string>) => new Set<string>(prev).add(itemId));
+
+      if (currentlyLiked) {
+        // ── UNLIKE WORKFLOW ──
+        // 1. Optimistic UI update (remove from set, decrement count)
+        setLikedItems((prev: Set<string>) => {
+          const next = new Set<string>(prev);
+          next.delete(itemId);
+          setLocalLikedItems(shopId, next);
+          return next;
+        });
+
+        setLikeCounts((prev: Record<string, number>) => ({
+          ...prev,
+          [itemId]: Math.max((prev[itemId] ?? 1) - 1, 0),
+        }));
+
+        try {
+          const res = await fetch('/api/menu/like', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shopId, itemId, visitorId: visitorIdRef.current }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (typeof data.likes === 'number') {
+              setLikeCounts((prev: Record<string, number>) => ({
+                ...prev,
+                [itemId]: data.likes,
+              }));
+            }
+          } else {
+            // Rollback on HTTP error (re-add item)
+            setLikedItems((prev: Set<string>) => {
+              const next = new Set<string>(prev).add(itemId);
+              setLocalLikedItems(shopId, next);
+              return next;
+            });
+            setLikeCounts((prev: Record<string, number>) => ({
+              ...prev,
+              [itemId]: (prev[itemId] ?? 0) + 1,
+            }));
+          }
+        } catch {
+          // Rollback on network error
+          setLikedItems((prev: Set<string>) => {
+            const next = new Set<string>(prev).add(itemId);
+            setLocalLikedItems(shopId, next);
+            return next;
+          });
+          setLikeCounts((prev: Record<string, number>) => ({
+            ...prev,
+            [itemId]: (prev[itemId] ?? 0) + 1,
+          }));
+        } finally {
+          setPendingLikes((prev: Set<string>) => {
+            const next = new Set<string>(prev);
+            next.delete(itemId);
+            return next;
+          });
+        }
+      } else {
+        // ── LIKE WORKFLOW ──
+        // 1. Optimistic UI update (add to set, increment count)
+        setLikedItems((prev: Set<string>) => {
+          const next = new Set<string>(prev).add(itemId);
+          setLocalLikedItems(shopId, next);
+          return next;
+        });
+
+        setLikeCounts((prev: Record<string, number>) => ({
+          ...prev,
+          [itemId]: (prev[itemId] ?? 0) + 1,
+        }));
+
+        try {
+          const res = await fetch('/api/menu/like', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shopId, itemId, visitorId: visitorIdRef.current }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (typeof data.likes === 'number') {
+              setLikeCounts((prev: Record<string, number>) => ({
+                ...prev,
+                [itemId]: data.likes,
+              }));
+            }
+          } else {
+            // Rollback on HTTP error (remove item)
+            setLikedItems((prev: Set<string>) => {
+              const next = new Set<string>(prev);
+              next.delete(itemId);
+              setLocalLikedItems(shopId, next);
+              return next;
+            });
+            setLikeCounts((prev: Record<string, number>) => ({
+              ...prev,
+              [itemId]: Math.max((prev[itemId] ?? 1) - 1, 0),
+            }));
+          }
+        } catch {
+          // Rollback on network error
+          setLikedItems((prev: Set<string>) => {
+            const next = new Set<string>(prev);
+            next.delete(itemId);
+            setLocalLikedItems(shopId, next);
+            return next;
+          });
+          setLikeCounts((prev: Record<string, number>) => ({
+            ...prev,
+            [itemId]: Math.max((prev[itemId] ?? 1) - 1, 0),
+          }));
+        } finally {
+          setPendingLikes((prev: Set<string>) => {
+            const next = new Set<string>(prev);
+            next.delete(itemId);
+            return next;
+          });
+        }
+      }
+    },
+    [shopId, likedItems, pendingLikes]
+  );
+
   return (
-    <AnalyticsCtx.Provider value={{ track }}>
+    <AnalyticsCtx.Provider
+      value={{
+        track,
+        visitorId: visitorIdRef.current,
+        isLiked,
+        getLikeCount,
+        isLikePending,
+        likeMenuItem,
+      }}
+    >
       {children}
     </AnalyticsCtx.Provider>
   );
@@ -319,7 +603,14 @@ export function useAnalytics(): AnalyticsContextValue {
   const ctx = useContext(AnalyticsCtx);
   if (!ctx) {
     // Outside provider — return no-op so components never crash
-    return { track: () => {} };
+    return {
+      track: () => {},
+      visitorId: '',
+      isLiked: () => false,
+      getLikeCount: () => 0,
+      isLikePending: () => false,
+      likeMenuItem: async () => {},
+    };
   }
   return ctx;
 }

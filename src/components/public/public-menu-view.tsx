@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Heart, Phone, MessageCircle, MapPin, Share2, Flame, Clock, Star, X, Megaphone } from 'lucide-react';
+import { Search, Heart, Phone, Flame, Clock, Star, X, Megaphone } from 'lucide-react';
 import { type FoodCardItem, type TimeframeType, FoodTypeDot } from '@/components/shared/item';
 import { useAnalytics } from '@/providers/analytics-provider';
 import { OfferCard } from '@/components/shared/offer-card';
@@ -111,7 +111,7 @@ function getCategoryEmoji(catName: string): string {
 function PublicOfferCarousel({ offers }: { offers: PublicOfferItem[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const touchStartX = useRef<number | null>(null);
+  const touchStartX = React.useRef<number | null>(null);
 
   // Auto-slide every 4 seconds if multiple offers present
   useEffect(() => {
@@ -178,11 +178,10 @@ function PublicOfferCarousel({ offers }: { offers: PublicOfferItem[] }) {
                 type="button"
                 onClick={() => setActiveIndex(i)}
                 aria-label={`Go to slide ${i + 1}`}
-                className={`transition-all duration-300 rounded-full cursor-pointer ${
-                  i === activeIndex
+                className={`transition-all duration-300 rounded-full cursor-pointer ${i === activeIndex
                     ? 'w-5 h-2 bg-[#f77512] shadow-xs'
                     : 'w-2 h-2 bg-white/60 hover:bg-white'
-                }`}
+                  }`}
               />
             ))}
           </div>
@@ -206,10 +205,14 @@ export default function PublicMenuView({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Items');
   const [activeTimeframe, setActiveTimeframe] = useState<TimeframeType>('today');
-  const [likedItems, setLikedItems] = useState<Record<string, boolean>>({});
   const [selectedItemModal, setSelectedItemModal] = useState<FoodCardItem | null>(null);
   const [isModalClosing, setIsModalClosing] = useState(false);
-  const { track } = useAnalytics();
+  const { track, isLiked, getLikeCount, isLikePending, likeMenuItem } = useAnalytics();
+
+  const handleLikeClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    likeMenuItem(id);
+  };
 
   const handleItemClick = (item: FoodCardItem) => {
     track('item_view', { itemId: item.id, itemName: item.title });
@@ -301,27 +304,15 @@ export default function PublicMenuView({
   const handleShare = () => {
     track('share_click');
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title: vendorName, url: window.location.href }).catch(() => {});
+      navigator.share({ title: vendorName, url: window.location.href }).catch(() => { });
     }
-  };
-
-  const toggleLike = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLikedItems(prev => {
-      const newVal = !prev[id];
-      if (newVal) {
-        // Only track when liking (not unliking)
-        track('like_click', { itemId: id });
-      }
-      return { ...prev, [id]: newVal };
-    });
   };
 
   return (
     <div className="min-h-screen bg-[#FDF6F0] text-gray-900 font-sans select-none">
       {/* ── Mobile: phone-frame | Desktop: full page ── */}
       <div className="lg:hidden max-w-[420px] mx-auto bg-[#FDF6F0] min-h-screen sm:min-h-0 sm:shadow-2xl sm:rounded-[3rem] sm:my-8 overflow-hidden relative sm:border sm:border-gray-200/80">
-        
+
         {/* Roof Awning Flap Canopy Header */}
         <div className="w-full relative z-20">
           <div className="w-full flex h-12 drop-shadow-xs">
@@ -452,7 +443,7 @@ export default function PublicMenuView({
                 const emoji = getCategoryEmoji(cat);
                 return (
                   <div key={index} onClick={() => setSelectedCategory(cat)} className="flex flex-col items-center gap-2 cursor-pointer group shrink-0 select-none">
-                    <div className={`w-[62px] h-[62px] rounded-full flex items-center justify-center transition-all duration-300 ${ isActive ? 'bg-[#f77512]/25 text-[#f77512] scale-110 shadow-xs font-black' : 'bg-[#f77512]/15 text-[#f77512]/90 hover:bg-[#f77512]/25 hover:scale-105 shadow-2xs'}` }>
+                    <div className={`w-[62px] h-[62px] rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-[#f77512]/25 text-[#f77512] scale-110 shadow-xs font-black' : 'bg-[#f77512]/15 text-[#f77512]/90 hover:bg-[#f77512]/25 hover:scale-105 shadow-2xs'}`}>
                       <span className={`transition-transform duration-300 ${isActive ? 'text-2xl scale-110' : 'text-xl'}`}>{emoji}</span>
                     </div>
                     <span className={`text-[11px] font-black transition-colors ${isActive ? 'text-[#f77512]' : 'text-gray-800 font-bold group-hover:text-[#f77512]'}`}>{cat}</span>
@@ -476,13 +467,16 @@ export default function PublicMenuView({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {todaysSpecialsList.map((item) => {
-                  const isLiked = !!likedItems[item.id];
+                  const itemIsLiked = isLiked(item.id);
+                  const itemLikeCount = getLikeCount(item.id);
+                  const isPending = isLikePending(item.id);
                   return (
                     <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
                       <div className="relative h-[120px] w-full bg-gray-50 overflow-hidden p-1">
                         {item.foodType && (<span className="absolute top-2 left-2 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
-                        <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2 right-2 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
-                          <Heart className={`w-3 h-3 ${isLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                        <button type="button" disabled={isPending} onClick={(e) => handleLikeClick(item.id, e)} className="absolute top-2 right-2 px-2 py-1.5 bg-white/95 backdrop-blur-md rounded-full z-10 text-gray-400 hover:text-red-500 transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-gray-100">
+                          <Heart className={`w-4 h-4 ${itemIsLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                          {itemLikeCount > 0 && <span className="text-xs font-black text-gray-800">{itemLikeCount}</span>}
                         </button>
                         {item.image ? (<img src={item.image} alt={item.title} className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500" />) : (<div className="w-full h-full flex items-center justify-center text-3xl">{getCategoryEmoji(item.category || '')}</div>)}
                       </div>
@@ -519,7 +513,7 @@ export default function PublicMenuView({
                 const isActive = activeTimeframe === tab.id;
                 const Icon = tab.icon;
                 return (
-                  <button key={tab.id} type="button" onClick={() => setActiveTimeframe(tab.id)} className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold whitespace-nowrap transition-all cursor-pointer ${ isActive ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900' }`}>
+                  <button key={tab.id} type="button" onClick={() => setActiveTimeframe(tab.id)} className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold whitespace-nowrap transition-all cursor-pointer ${isActive ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
                     <Icon size={11} className={isActive ? 'text-amber-400' : 'text-slate-500'} />
                     <span>{tab.label}</span>
                   </button>
@@ -538,15 +532,18 @@ export default function PublicMenuView({
           ) : (
             <div className="grid grid-cols-2 gap-3 mb-8">
               {filteredItems.map((item) => {
-                const isLiked = !!likedItems[item.id];
+                const itemIsLiked = isLiked(item.id);
+                const itemLikeCount = getLikeCount(item.id);
+                const isPending = isLikePending(item.id);
                 const badgeText = item.isTodaysSpecial ? "SPECIAL" : item.isBestseller ? "BESTSELLER" : item.badgeLabel;
                 const badgeColor = item.isTodaysSpecial ? "text-[#B91C1C]" : item.isBestseller ? "text-[#B45309]" : "text-[#EA580C]";
                 return (
-                  <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
+                  <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
                     <div className="relative h-[120px] w-full bg-gray-50 overflow-hidden p-1">
                       {item.foodType && (<span className="absolute top-2 left-2 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
-                      <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2 right-2 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
-                        <Heart className={`w-3 h-3 ${isLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                      <button type="button" disabled={isPending} onClick={(e) => handleLikeClick(item.id, e)} className="absolute top-2 right-2 px-2 py-1.5 bg-white/95 backdrop-blur-md rounded-full z-10 text-gray-400 hover:text-red-500 transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-gray-100">
+                        <Heart className={`w-4 h-4 ${itemIsLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                        {itemLikeCount > 0 && <span className="text-xs font-black text-gray-800">{itemLikeCount}</span>}
                       </button>
                       {item.image ? (<img src={item.image} alt={item.title} className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500" />) : (<div className="w-full h-full flex items-center justify-center text-3xl">{getCategoryEmoji(item.category || '')}</div>)}
                     </div>
@@ -654,7 +651,7 @@ export default function PublicMenuView({
               const isActive = selectedCategory === cat;
               const emoji = getCategoryEmoji(cat);
               return (
-                <button key={index} type="button" onClick={() => setSelectedCategory(cat)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-left transition-all font-bold text-sm ${ isActive ? 'bg-[#f77512]/15 text-[#f77512]' : 'text-gray-700 hover:bg-gray-100' }`}>
+                <button key={index} type="button" onClick={() => setSelectedCategory(cat)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-left transition-all font-bold text-sm ${isActive ? 'bg-[#f77512]/15 text-[#f77512]' : 'text-gray-700 hover:bg-gray-100'}`}>
                   <span className="text-lg">{emoji}</span>
                   <span>{cat}</span>
                 </button>
@@ -714,17 +711,20 @@ export default function PublicMenuView({
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {todaysSpecialsList.map((item) => {
-                  const isLiked = !!likedItems[item.id];
+                  const itemIsLiked = isLiked(item.id);
+                  const itemLikeCount = getLikeCount(item.id);
+                  const isPending = isLikePending(item.id);
                   return (
                     <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden group">
                       <div className="relative aspect-[4/3] w-full bg-gray-50 overflow-hidden p-1.5">
                         {item.foodType && (<span className="absolute top-2.5 left-2.5 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
-                        <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2.5 right-2.5 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
-                          <Heart className={`w-3 h-3 ${isLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                        <button type="button" disabled={isPending} onClick={(e) => handleLikeClick(item.id, e)} className="absolute top-2.5 right-2.5 px-2.5 py-1.5 bg-white/95 backdrop-blur-md rounded-full z-10 text-gray-400 hover:text-red-500 transition-all shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-gray-100">
+                          <Heart className={`w-4 h-4 ${itemIsLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                          {itemLikeCount > 0 && <span className="text-xs font-black text-gray-800">{itemLikeCount}</span>}
                         </button>
                         {item.image ? (<img src={item.image} alt={item.title} className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500" />) : (<div className="w-full h-full flex items-center justify-center text-4xl">{getCategoryEmoji(item.category || '')}</div>)}
                       </div>
-                        <div className="flex flex-col flex-1 p-3">
+                      <div className="flex flex-col flex-1 p-3">
                         <span className="text-[9px] font-black text-[#B91C1C] tracking-widest uppercase mb-0.5">Special</span>
                         <h4 className="font-extrabold text-[13px] text-gray-900 leading-tight line-clamp-1 mb-0.5">{item.title}</h4>
                         {item.description ? (
@@ -757,7 +757,7 @@ export default function PublicMenuView({
                 const isActive = activeTimeframe === tab.id;
                 const Icon = tab.icon;
                 return (
-                  <button key={tab.id} type="button" onClick={() => setActiveTimeframe(tab.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${ isActive ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900' }`}>
+                  <button key={tab.id} type="button" onClick={() => setActiveTimeframe(tab.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${isActive ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
                     <Icon size={12} className={isActive ? 'text-amber-400' : 'text-slate-500'} />
                     <span>{tab.label}</span>
                   </button>
@@ -776,15 +776,18 @@ export default function PublicMenuView({
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-10">
               {filteredItems.map((item) => {
-                const isLiked = !!likedItems[item.id];
+                const itemIsLiked = isLiked(item.id);
+                const itemLikeCount = getLikeCount(item.id);
+                const isPending = isLikePending(item.id);
                 const badgeText = item.isTodaysSpecial ? "SPECIAL" : item.isBestseller ? "BESTSELLER" : item.badgeLabel;
                 const badgeColor = item.isTodaysSpecial ? "text-[#B91C1C]" : item.isBestseller ? "text-[#B45309]" : "text-[#EA580C]";
                 return (
                   <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden group">
                     <div className="relative aspect-[4/3] w-full bg-gray-50 overflow-hidden p-1.5">
                       {item.foodType && (<span className="absolute top-2.5 left-2.5 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
-                      <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2.5 right-2.5 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
-                        <Heart className={`w-3 h-3 ${isLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                      <button type="button" disabled={isPending} onClick={(e) => handleLikeClick(item.id, e)} className="absolute top-2.5 right-2.5 px-2.5 py-1.5 bg-white/95 backdrop-blur-md rounded-full z-10 text-gray-400 hover:text-red-500 transition-all shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-gray-100">
+                        <Heart className={`w-4 h-4 ${itemIsLiked ? 'text-red-500 fill-red-500' : ''}`} strokeWidth={2.5} />
+                        {itemLikeCount > 0 && <span className="text-xs font-black text-gray-800">{itemLikeCount}</span>}
                       </button>
                       {item.image ? (<img src={item.image} alt={item.title} className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500" />) : (<div className="w-full h-full flex items-center justify-center text-4xl">{getCategoryEmoji(item.category || '')}</div>)}
                     </div>
@@ -817,15 +820,13 @@ export default function PublicMenuView({
       {/* ── Zoomed Floating Item Detail Modal Widget (Apple Spring Animation) ── */}
       {selectedItemModal && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto ${
-            isModalClosing ? 'apple-backdrop-out' : 'apple-backdrop-in'
-          }`}
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto ${isModalClosing ? 'apple-backdrop-out' : 'apple-backdrop-in'
+            }`}
           onClick={closeModal}
         >
           <div
-            className={`relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-gray-100/80 overflow-hidden my-auto cursor-default ${
-              isModalClosing ? 'apple-card-out' : 'apple-card-in'
-            }`}
+            className={`relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-gray-100/80 overflow-hidden my-auto cursor-default ${isModalClosing ? 'apple-card-out' : 'apple-card-in'
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Banner Image Container */}
@@ -901,13 +902,18 @@ export default function PublicMenuView({
                 </div>
                 <button
                   type="button"
-                  onClick={(e) => toggleLike(selectedItemModal.id, e)}
-                  className="p-2.5 bg-slate-100 hover:bg-rose-50 rounded-full text-slate-400 hover:text-rose-500 transition-colors shrink-0 cursor-pointer shadow-xs"
+                  disabled={isLikePending(selectedItemModal.id)}
+                  onClick={(e) => handleLikeClick(selectedItemModal.id, e)}
+                  className="px-4 py-2.5 bg-rose-50/90 hover:bg-rose-100 border border-rose-200/80 rounded-full text-slate-700 hover:text-rose-600 transition-all shrink-0 cursor-pointer shadow-xs flex items-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50"
                 >
                   <Heart
-                    size={20}
-                    className={likedItems[selectedItemModal.id] ? 'text-rose-500 fill-rose-500' : ''}
+                    size={22}
+                    className={isLiked(selectedItemModal.id) ? 'text-rose-500 fill-rose-500' : ''}
+                    strokeWidth={2.5}
                   />
+                  {getLikeCount(selectedItemModal.id) > 0 && (
+                    <span className="text-sm font-black text-slate-800">{getLikeCount(selectedItemModal.id)}</span>
+                  )}
                 </button>
               </div>
 
@@ -948,7 +954,8 @@ export default function PublicMenuView({
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

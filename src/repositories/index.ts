@@ -4,4 +4,5 @@ export { categoryRepository } from './category.repository';
 export { menuRepository } from './menu.repository';
 export { promotionRepository } from './promotion.repository';
 export { analyticsRepository } from './analytics.repository';
+export { likeRepository } from './like.repository';
 export type { BatchEvent } from './analytics.repository';

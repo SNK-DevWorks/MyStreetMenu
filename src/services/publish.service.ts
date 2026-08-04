@@ -366,7 +366,7 @@ export const publishService = {
             Key: getR2Key(shopId),
             Body: body,
             ContentType: 'application/json',
-            CacheControl: 'public, max-age=60, stale-while-revalidate=300',
+            CacheControl: 'public, max-age=0, must-revalidate',
           }),
         ),
       );

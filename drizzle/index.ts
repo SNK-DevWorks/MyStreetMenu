@@ -8,4 +8,6 @@ export * from './schema/daily-shop-stats';
 export * from './schema/daily-item-stats';
 export * from './schema/daily-unique-visitors';
 export * from './schema/subscriptions';
+export * from './schema/item-likes';
+export * from './schema/item-like-counts';
 export * from './relations';

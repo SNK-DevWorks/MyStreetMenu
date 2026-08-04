@@ -9,7 +9,7 @@
  *     never plain pastel).
  */
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

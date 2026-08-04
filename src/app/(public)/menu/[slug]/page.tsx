@@ -5,6 +5,8 @@ import PublicMenuView from '@/components/public/public-menu-view';
 import { publishedMenuAdapter } from '@/lib/adapters/published-menu-adapter';
 import type { PublishedMenu } from '@/services/publish.service';
 
+export const revalidate = 0;
+
 export default async function MenuSlugPage({
   params,
 }: {
@@ -16,13 +18,10 @@ export default async function MenuSlugPage({
   const shop = await shopRepository.findBySlug(slug);
   if (!shop) return notFound();
 
-  // Fetch published menu JSON from Cloudflare CDN
-  // CDN JSON is the source of truth for public availability — no publishStatus check needed
+  // Fetch published menu JSON from Cloudflare CDN with cache disabled for real-time updates
   const cdnUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/published/menus/${shop.id}.json`;
   const res = await fetch(cdnUrl, {
-    // 5-minute Next.js ISR cache — vendor menu changes already trigger a publish,
-    // so the CDN JSON is always fresh. This cache is just a safety net.
-    next: { revalidate: 300 },
+    cache: 'no-store',
   });
 
   if (!res.ok) return notFound();

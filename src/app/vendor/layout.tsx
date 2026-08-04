@@ -1,7 +1,7 @@
 'use client';
 
 import React, { ReactNode, useState, useEffect, useRef, Suspense } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import MenuLoading from '@/app/vendor/menu/loading';
 import { createClient } from '@/lib/supabase/client';
@@ -488,6 +488,57 @@ export const Footer: React.FC = () => {
   );
 };
 
+function VendorSubNavContent({ pathname, currentSubNav }: { pathname: string; currentSubNav: SubNavItem[] }) {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeSubTab = tabParam || (currentSubNav.length > 0 ? currentSubNav[0].id : '');
+
+  return (
+    <div className="w-full md:w-[240px] shrink-0 flex flex-row items-center justify-center md:justify-start gap-1 sm:gap-2.5 md:gap-4 max-w-full md:max-w-none mx-auto md:mx-0 md:flex-col lg:ml-12 mt-1 md:mt-2 md:sticky md:top-[155px]">
+      {currentSubNav.map((item) => {
+        const Icon = item.icon;
+        const isActive = activeSubTab === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={`${pathname}?tab=${item.id}`}
+            className={`relative flex-1 md:flex-initial flex items-center justify-center md:justify-start gap-1 sm:gap-2 md:gap-3.5 text-center md:text-left transition-all duration-200 group py-2 px-1 xs:px-2 sm:px-3 md:py-3 md:px-4 rounded-lg sm:rounded-xl md:rounded-2xl cursor-pointer whitespace-nowrap min-w-0 md:w-full ${
+              isActive
+                ? 'bg-[#FFEAD8] text-[#f77512] font-extrabold border border-orange-200/80 shadow-2xs'
+                : 'bg-white text-[#3d3d3d] font-bold border border-gray-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
+            }`}
+          >
+            <Icon
+              className={`w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 md:w-[22px] md:h-[22px] shrink-0 ${isActive ? 'text-[#f77512]' : 'text-gray-500 group-hover:text-gray-700'}`}
+              strokeWidth={2}
+            />
+            <span className={`text-[11px] sm:text-[13px] md:text-[15px] truncate sm:whitespace-nowrap ${isActive
+              ? 'text-[#f77512] font-black'
+              : 'text-[#3d3d3d] font-extrabold group-hover:text-slate-900'
+              }`}>
+              {item.label}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function VendorSubNav({ pathname, currentSubNav }: { pathname: string; currentSubNav: SubNavItem[] }) {
+  return (
+    <Suspense fallback={
+      <div className="w-full md:w-[240px] shrink-0 flex flex-row items-center justify-center md:justify-start gap-1 sm:gap-2.5 md:gap-4 max-w-full md:max-w-none mx-auto md:mx-0 md:flex-col lg:ml-12 mt-1 md:mt-2 md:sticky md:top-[155px]">
+        {currentSubNav.map((item) => (
+          <div key={item.id} className="flex-1 md:flex-initial h-10 md:h-12 bg-gray-200/60 animate-pulse rounded-lg md:rounded-2xl md:w-full" />
+        ))}
+      </div>
+    }>
+      <VendorSubNavContent pathname={pathname} currentSubNav={currentSubNav} />
+    </Suspense>
+  );
+}
+
 interface LayoutProps {
   children?: ReactNode;
 }
@@ -497,7 +548,6 @@ const AUTH_PATHS = ['/vendor/login', '/vendor/signup', '/vendor/onboarding'];
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const isAuthPath = AUTH_PATHS.includes(pathname);
 
@@ -512,25 +562,6 @@ export default function Layout({ children }: LayoutProps) {
 
   const activeTab = getTabFromPathname(pathname);
   const currentSubNav = SUB_NAV_ITEMS[activeTab] || [];
-  const [activeSubTab, setActiveSubTab] = useState<string>('');
-
-  // Sync activeSubTab from URL query string on client side
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get('tab');
-    if (tabParam) {
-      setActiveSubTab(tabParam);
-    } else if (currentSubNav.length > 0) {
-      setActiveSubTab(currentSubNav[0].id);
-    } else {
-      setActiveSubTab('');
-    }
-  }, [pathname, currentSubNav]);
-
-  const handleSubTabChange = (subTabId: string) => {
-    setActiveSubTab(subTabId);
-    router.push(`${pathname}?tab=${subTabId}`);
-  };
 
   // Render bare (no shell) for auth pages like /vendor/login
   if (isAuthPath) {
@@ -567,34 +598,7 @@ export default function Layout({ children }: LayoutProps) {
           {currentSubNav.length > 0 ? (
             <div className="max-w-[1536px] mx-auto px-2 sm:px-4 md:px-8 pt-3 md:pt-6 pb-10 flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-16 items-start relative bg-[#fdf8f3]">
               {/* Left/Top Sub-Navigation */}
-              <div className="w-full md:w-[240px] shrink-0 flex flex-row items-center justify-center md:justify-start gap-1 sm:gap-2.5 md:gap-4 max-w-full md:max-w-none mx-auto md:mx-0 md:flex-col lg:ml-12 mt-1 md:mt-2 md:sticky md:top-[155px]">
-                {currentSubNav.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeSubTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleSubTabChange(item.id)}
-                      className={`relative flex-1 md:flex-initial flex items-center justify-center md:justify-start gap-1 sm:gap-2 md:gap-3.5 text-center md:text-left transition-all duration-200 group py-2 px-1 xs:px-2 sm:px-3 md:py-3 md:px-4 rounded-lg sm:rounded-xl md:rounded-2xl cursor-pointer whitespace-nowrap min-w-0 md:w-full ${
-                        isActive
-                          ? 'bg-[#FFEAD8] text-[#f77512] font-extrabold border border-orange-200/80 shadow-2xs'
-                          : 'bg-white text-[#3d3d3d] font-bold border border-gray-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 md:w-[22px] md:h-[22px] shrink-0 ${isActive ? 'text-[#f77512]' : 'text-gray-500 group-hover:text-gray-700'}`}
-                        strokeWidth={2}
-                      />
-                      <span className={`text-[11px] sm:text-[13px] md:text-[15px] truncate sm:whitespace-nowrap ${isActive
-                        ? 'text-[#f77512] font-black'
-                        : 'text-[#3d3d3d] font-extrabold group-hover:text-slate-900'
-                        }`}>
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <VendorSubNav pathname={pathname} currentSubNav={currentSubNav} />
 
               {/* Right Side: Main Content Area */}
               <div className="flex-1 w-full bg-[#fdf8f3] min-h-[500px]">
