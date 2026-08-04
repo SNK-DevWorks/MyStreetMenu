@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 // Google "G" SVG Icon
@@ -53,6 +53,9 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   // Confirmation Link screen state
   const [showConfirmScreen, setShowConfirmScreen] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
+  // Capture the intended destination at the point the confirm screen is shown,
+  // so we don't re-compute it with stale searchParams later.
+  const pendingDestRef = useRef<string | null>(null);
 
   // Loading & Error states
   const [isLoading, setIsLoading] = useState(false);
@@ -99,8 +102,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   };
 
   // Helper to determine destination path based on vendor onboarding status
-  const getDestinationUrl = (user: any) => {
-    const nextParam = searchParams.get("next");
+  const getDestinationUrl = (user: { user_metadata?: Record<string, unknown> }, nextParam: string | null) => {
     if (nextParam && nextParam !== "/vendor/onboarding") {
       return nextParam;
     }
@@ -114,15 +116,18 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   // Check initial session on mount: if user is already logged in, redirect to destination
   // Also read ?error=auth_failed from the callback route and show a friendly message
   useEffect(() => {
+    // Capture search params values at mount time to avoid stale-closure issues
+    const nextParam = searchParams.get('next');
+    const errorParam = searchParams.get('error');
+
     const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const dest = getDestinationUrl(session.user);
+        const dest = getDestinationUrl(session.user, nextParam);
         router.replace(dest);
         return;
       }
       // Show friendly message if redirected back from a failed auth callback
-      const errorParam = searchParams.get('error');
       if (errorParam === 'auth_failed') {
         setErrorMsg('Your confirmation link has expired or is invalid. Please sign up again or request a new link.');
         // Clean the param from URL without reload
@@ -130,7 +135,8 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
       }
     };
     checkInitialSession();
-  }, [supabase.auth, router, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount — searchParams values captured above
 
   // Mode switch handler
   const handleToggleMode = () => {
@@ -142,23 +148,35 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
     window.history.replaceState(null, "", nextIsLogin ? "/vendor/login" : "/vendor/signup");
   };
 
-  // Auto-detect when user confirms email link in another tab / browser
+  // ─── Listen for email confirmation in real-time ──────────────────────────────
+  // Using onAuthStateChange instead of polling so we react instantly (critical for
+  // mobile PWA where the user may confirm email in a different tab and switch back).
   useEffect(() => {
     if (!showConfirmScreen) return;
 
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const dest = pendingDestRef.current ?? getDestinationUrl(session.user, null);
+          router.replace(dest);
+          router.refresh();
+        }
+      }
+    );
+
+    // Fallback: do one immediate check in case the session arrived before the
+    // subscription was set up (e.g. user was very fast)
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        const dest = getDestinationUrl(session.user);
+        const dest = pendingDestRef.current ?? getDestinationUrl(session.user, null);
         router.replace(dest);
         router.refresh();
       }
-    };
+    });
 
-    checkSession();
-    const interval = setInterval(checkSession, 3000);
-    return () => clearInterval(interval);
-  }, [showConfirmScreen, supabase.auth, router, searchParams]);
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showConfirmScreen]); // Only re-subscribe if the confirm screen visibility changes
 
   // Login / Signup Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,7 +200,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('msm_welcome_seen');
       }
-      const dest = getDestinationUrl(authData?.user);
+      const dest = getDestinationUrl(authData?.user, searchParams.get('next'));
       router.push(dest);
       router.refresh();
     } else {
@@ -216,6 +234,8 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
 
       if (data.user && !data.session) {
         // Needs email confirmation via link
+        // Capture the intended destination before showing the confirm screen
+        pendingDestRef.current = '/vendor/onboarding'; // new users always go to onboarding
         setShowConfirmScreen(true);
         setResendMsg("A confirmation link has been sent to your email!");
         setIsLoading(false);
@@ -225,7 +245,7 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('msm_welcome_seen');
       }
-      const dest = getDestinationUrl(data.user);
+      const dest = data.user ? getDestinationUrl(data.user, null) : '/vendor/onboarding';
       router.push(dest);
       router.refresh();
     }
