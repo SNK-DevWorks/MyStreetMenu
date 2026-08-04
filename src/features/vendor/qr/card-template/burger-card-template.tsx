@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Share2, Download, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -292,7 +292,20 @@ export default function BurgerCardTemplate({
       .catch(() => console.warn('Failed to load text logo image'));
   }, []);
 
-  const qrModules = buildQrModules(publicMenuUrl);
+  // Append ?qr=1&src=qr so the public menu page fires the qr_scan analytics event
+  const qrUrl = useMemo(() => {
+    if (!publicMenuUrl) return publicMenuUrl;
+    try {
+      const u = new URL(publicMenuUrl);
+      u.searchParams.set('qr', '1');
+      u.searchParams.set('src', 'qr');
+      return u.toString();
+    } catch {
+      return `${publicMenuUrl}?qr=1&src=qr`;
+    }
+  }, [publicMenuUrl]);
+
+  const qrModules = buildQrModules(qrUrl);
   const M = qrModules.length;
 
   const handleDownload = useCallback(async () => {
@@ -338,7 +351,7 @@ export default function BurgerCardTemplate({
       canvas.width = size;
       canvas.height = size;
 
-      await QRCode.toCanvas(canvas, publicMenuUrl || 'https://mystreetmenu.com', {
+      await QRCode.toCanvas(canvas, qrUrl || 'https://mystreetmenu.com', {
         width: size,
         margin: 2,
         color: {
@@ -371,7 +384,7 @@ export default function BurgerCardTemplate({
       }
     }
     try {
-      await navigator.clipboard.writeText(publicMenuUrl);
+      await navigator.clipboard.writeText(qrUrl);
     } catch {
       /* ignore */
     }

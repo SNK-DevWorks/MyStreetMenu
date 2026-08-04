@@ -247,13 +247,50 @@ export const MostViewedCard: React.FC<{ analytics: DashboardAnalytics | null; lo
 
 // ─── Stats Cards Container ─────────────────────────────────────────────────────
 
+const STATS_CACHE_KEY = 'msm_dash_analytics';
+const STATS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function loadCachedAnalytics(): DashboardAnalytics | null {
+  try {
+    const raw = localStorage.getItem(STATS_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw) as { ts: number; data: DashboardAnalytics };
+    if (Date.now() - ts > STATS_CACHE_TTL_MS) { localStorage.removeItem(STATS_CACHE_KEY); return null; }
+    return data;
+  } catch { return null; }
+}
+
+function saveAnalyticsCache(data: DashboardAnalytics) {
+  try { localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
 export const StatsCards: React.FC = () => {
-  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return loadCachedAnalytics();
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return loadCachedAnalytics() === null; // Only show spinner on cache miss
+  });
 
   useEffect(() => {
+    // If we have a valid cache, show it immediately and refresh silently in background
+    const cached = loadCachedAnalytics();
+    if (cached) {
+      setAnalytics(cached);
+      setLoading(false);
+      // Silent background refresh after a short delay so the user sees data instantly
+      setTimeout(() => {
+        getDashboardAnalyticsAction()
+          .then((fresh) => { setAnalytics(fresh); saveAnalyticsCache(fresh); })
+          .catch(() => {});
+      }, 2000);
+      return;
+    }
+    // Cache miss — fetch immediately and show spinner
     getDashboardAnalyticsAction()
-      .then(setAnalytics)
+      .then((data) => { setAnalytics(data); saveAnalyticsCache(data); })
       .catch(() => setAnalytics(null))
       .finally(() => setLoading(false));
   }, []);

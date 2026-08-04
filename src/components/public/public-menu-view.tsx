@@ -307,7 +307,14 @@ export default function PublicMenuView({
 
   const toggleLike = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLikedItems(prev => ({ ...prev, [id]: !prev[id] }));
+    setLikedItems(prev => {
+      const newVal = !prev[id];
+      if (newVal) {
+        // Only track when liking (not unliking)
+        track('like_click', { itemId: id });
+      }
+      return { ...prev, [id]: newVal };
+    });
   };
 
   return (
@@ -409,22 +416,24 @@ export default function PublicMenuView({
             </div>
           </div>
 
-          {/* ── 1. ANNOUNCEMENTS (Slim Centered Notification Bar Style) ── */}
+          {/* ── 1. ANNOUNCEMENTS (Slim Notification Bar Style) ────────────────── */}
           {announcements && announcements.length > 0 && isAllCategory && !searchQuery && (
             <div className="mb-4 flex flex-col gap-2">
               {announcements.map((ann) => (
                 <div
                   key={ann.id}
-                  className="w-full bg-gradient-to-r from-indigo-50/95 via-blue-50/90 to-indigo-50/95 border border-indigo-200/80 rounded-2xl px-3.5 py-2.5 shadow-2xs flex items-center justify-center gap-2.5 transition-all hover:border-indigo-300 active:scale-[0.99]"
+                  className="w-full bg-gradient-to-r from-indigo-50/95 via-blue-50/90 to-indigo-50/95 border border-indigo-200/80 rounded-2xl px-3.5 py-2.5 shadow-2xs flex items-center gap-3 transition-all hover:border-indigo-300 active:scale-[0.99]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Megaphone size={13} />
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Megaphone size={15} />
                   </div>
-                  <div className="flex items-center justify-center gap-2 min-w-0 text-center">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/90 px-1.5 py-0.5 rounded-md shrink-0">Notice</span>
-                    <h4 className="text-xs sm:text-sm font-black text-indigo-950 truncate leading-tight">{ann.title}</h4>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/90 px-1.5 py-0.5 rounded-md">Notice</span>
+                      <h4 className="text-xs sm:text-sm font-black text-indigo-950 truncate leading-tight">{ann.title}</h4>
+                    </div>
                     {ann.description && (
-                      <p className="text-[11px] text-indigo-900/80 font-semibold truncate leading-tight hidden sm:inline">&ndash; {ann.description}</p>
+                      <p className="text-[11px] text-indigo-900/80 font-semibold line-clamp-1 mt-0.5 leading-tight">{ann.description}</p>
                     )}
                   </div>
                 </div>
@@ -659,22 +668,24 @@ export default function PublicMenuView({
         {/* Main content area */}
         <main className="flex-1 min-w-0 px-8 xl:px-12 py-8 overflow-y-auto bg-[#FDF6F0]">
 
-          {/* ── 1. ANNOUNCEMENTS (Desktop — Slim Centered Notification Bar Style) ── */}
+          {/* ── 1. ANNOUNCEMENTS (Desktop — Slim Notification Bar Style) ────── */}
           {announcements && announcements.length > 0 && isAllCategory && !searchQuery && (
             <div className="mb-6 flex flex-col gap-2.5 w-full">
               {announcements.map((ann) => (
                 <div
                   key={ann.id}
-                  className="w-full bg-gradient-to-r from-indigo-50/95 via-blue-50/90 to-indigo-50/95 border border-indigo-200/80 rounded-2xl px-4 py-3 shadow-2xs flex items-center justify-center gap-3.5 transition-all hover:border-indigo-300 active:scale-[0.99]"
+                  className="w-full bg-gradient-to-r from-indigo-50/95 via-blue-50/90 to-indigo-50/95 border border-indigo-200/80 rounded-2xl px-4 py-3 shadow-2xs flex items-center gap-3.5 transition-all hover:border-indigo-300 active:scale-[0.99]"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Megaphone size={15} />
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Megaphone size={16} />
                   </div>
-                  <div className="flex items-center justify-center gap-2.5 min-w-0 text-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-md shrink-0">Notice</span>
-                    <h4 className="text-sm font-black text-indigo-950 truncate leading-tight">{ann.title}</h4>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-md">Notice</span>
+                      <h4 className="text-sm font-black text-indigo-950 truncate leading-tight">{ann.title}</h4>
+                    </div>
                     {ann.description && (
-                      <p className="text-xs text-indigo-900/80 font-semibold truncate leading-tight">&ndash; {ann.description}</p>
+                      <p className="text-xs text-indigo-900/80 font-semibold line-clamp-1 mt-0.5 leading-tight">{ann.description}</p>
                     )}
                   </div>
                 </div>
