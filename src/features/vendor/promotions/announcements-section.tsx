@@ -42,14 +42,16 @@ export default function AnnouncementsSection() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ id: string; title: string } | null>(null);
+
   useEffect(() => {
     setAnnouncements(contextAnnouncements);
   }, [contextAnnouncements]);
 
   useEffect(() => {
-    document.body.style.overflow = isModalOpen ? 'hidden' : '';
+    document.body.style.overflow = (isModalOpen || !!deleteConfirmTarget) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [isModalOpen]);
+  }, [isModalOpen, deleteConfirmTarget]);
 
   const handleOpenCreateModal = () => {
     setEditingAnnouncement(null);
@@ -245,8 +247,10 @@ export default function AnnouncementsSection() {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm('Delete this announcement?')) handleDelete(item.id);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDeleteConfirmTarget({ id: item.id, title: item.title });
                       }}
                       disabled={isDeleting}
                       className="p-1.5 text-[#1E1B4B] hover:text-red-600 hover:bg-white/80 rounded-lg transition-colors cursor-pointer"
@@ -406,6 +410,53 @@ export default function AnnouncementsSection() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gokul Construction Style Delete Confirmation Modal ────────────────────── */}
+      {deleteConfirmTarget && (
+        <div
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setDeleteConfirmTarget(null)}
+        >
+          <div
+            className="bg-white border border-black/10 rounded-[28px] max-w-sm w-full p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 mb-4 shadow-sm">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                Delete Announcement?
+              </h3>
+              <p className="text-sm text-slate-500 mt-2 font-medium leading-relaxed">
+                Are you sure you want to delete <span className="font-bold text-slate-800">&quot;{deleteConfirmTarget.title}&quot;</span>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 w-full mt-6">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmTarget(null)}
+                  className="flex-grow py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    const { id } = deleteConfirmTarget;
+                    setDeleteConfirmTarget(null);
+                    handleDelete(id);
+                  }}
+                  className="flex-grow py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-rose-600/20 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? <Loader2 size={15} className="animate-spin" /> : null}
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

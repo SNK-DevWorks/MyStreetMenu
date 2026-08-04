@@ -13,9 +13,10 @@ const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'im
 // ─── Image Type Configs ───────────────────────────────────────────────────────
 
 const IMAGE_CONFIGS = {
-  menu:  { width: 800,  height: 1000, folder: 'menu'  },
-  logo:  { width: 400,  height: 400,  folder: 'logo'  },
-  cover: { width: 1600, height: 900,  folder: 'cover' },
+  menu:  { width: 800,  height: 1000, folder: 'menu'   },
+  logo:  { width: 400,  height: 400,  folder: 'logo'   },
+  cover: { width: 1600, height: 900,  folder: 'cover'  },
+  offer: { width: 800,  height: 400,  folder: 'offers' },
 } as const;
 
 export type ImageType = keyof typeof IMAGE_CONFIGS;

@@ -5,11 +5,23 @@ import { Heart, Eye, Trash2, Pencil, Flame, Calendar, Clock } from 'lucide-react
 
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
+export interface ResolvedOfferBadge {
+  id: string;
+  title: string;
+  type: 'percentage' | 'flat' | 'bxgy';
+  value: number;
+  badge: string; // "20% OFF", "₹50 OFF", "Buy 1 Get 1"
+}
+
 export interface FoodCardItem {
   id: string;
   title: string;
   description: string;
-  price?: string;
+  price?: string;            // formatted display price (legacy, kept for vendor view)
+  priceOriginal?: number;    // raw number — from published JSON
+  priceFinal?: number;       // after offer discount
+  hasDiscount?: boolean;     // true if priceFinal < priceOriginal
+  resolvedOffer?: ResolvedOfferBadge | null;
   image: string;
   badgeLabel?: string;
   category?: string;
@@ -86,7 +98,7 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
   const {
     id, title, description, price = '₹199', image,
     badgeLabel, category, foodType, isBestseller, isTodaysSpecial,
-    isAvailable = true, stats,
+    isAvailable = true, stats, resolvedOffer, priceOriginal, priceFinal, hasDiscount,
   } = props;
 
   const [liked, setLiked] = useState(false);
@@ -183,6 +195,13 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
           </div>
         )}
 
+        {/* Offer Badge — shown on image bottom-left for customer view */}
+        {props.variant === 'customer' && resolvedOffer && (
+          <span className="absolute bottom-2.5 left-2.5 z-10 bg-[#f77512] text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md tracking-wide">
+            {resolvedOffer.badge}
+          </span>
+        )}
+
         {/* Sold-out overlay */}
         {props.variant === 'vendor' && !isAvailable && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
@@ -219,9 +238,11 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
           )}
         </div>
 
-        <p className="text-xs sm:text-sm text-gray-500 font-medium line-clamp-2 mb-2 leading-relaxed">
-          {description || 'Delicious & fresh'}
-        </p>
+        {description ? (
+          <p className="text-xs sm:text-sm text-gray-500 font-medium line-clamp-2 mb-2 leading-relaxed">
+            {description}
+          </p>
+        ) : null}
 
         {/* Category tag (vendor only) */}
         {category && props.variant === 'vendor' && (
@@ -231,8 +252,22 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
         )}
 
         {/* Price row */}
-        <div className="flex items-center justify-between mt-auto pt-1">
-          <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">{price}</span>
+        <div className="flex items-center justify-between mt-auto pt-1 gap-2">
+          <div className="flex flex-col">
+            {/* Discounted price display for customer view */}
+            {props.variant === 'customer' && hasDiscount && priceOriginal != null && priceFinal != null ? (
+              <>
+                <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                  ₹{priceFinal}
+                </span>
+                <span className="text-xs text-gray-400 line-through">
+                  ₹{priceOriginal}
+                </span>
+              </>
+            ) : (
+              <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">{price}</span>
+            )}
+          </div>
           {props.variant === 'customer' && hasStats && (
             <button
               type="button"

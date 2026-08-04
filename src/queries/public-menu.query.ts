@@ -78,6 +78,7 @@ export async function getPublicMenuSnapshot(shopId: string) {
       .orderBy(asc(menuItems.sortOrder)),
 
     // Only include promotions that are marked active and haven't expired yet
+    // endDate is now a DATE column (string) — compare with today's ISO date string
     db
       .select()
       .from(promotions)
@@ -85,7 +86,7 @@ export async function getPublicMenuSnapshot(shopId: string) {
         and(
           eq(promotions.shopId, shopId),
           eq(promotions.isActive, true),
-          or(isNull(promotions.endDate), gte(promotions.endDate, now)),
+          or(isNull(promotions.endDate), gte(promotions.endDate, now.toISOString().split('T')[0])),
         ),
       ),
   ]);

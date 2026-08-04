@@ -131,6 +131,7 @@ export default function MenuManagement() {
 
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState<string>('');
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ type: 'item' | 'category'; id: string; name: string } | null>(null);
 
   // ——— Transitions for mutations ——————————————————————————————————————————————
   const [isSaving, startSavingTransition] = useTransition();
@@ -189,9 +190,9 @@ export default function MenuManagement() {
 
   // ——— Body scroll lock when modal open ———————————————————————————————————————
   useEffect(() => {
-    document.body.style.overflow = isModalOpen ? 'hidden' : '';
+    document.body.style.overflow = (isModalOpen || !!deleteConfirmTarget) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [isModalOpen]);
+  }, [isModalOpen, deleteConfirmTarget]);
 
   // ——— Filtered card items ————————————————————————————————————————————————————
   const cardItems: FoodCardItem[] = dbItems
@@ -1050,10 +1051,10 @@ export default function MenuManagement() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm(`Are you sure you want to delete category "${cat.name}"?`)) {
-                          handleDeleteCategory(cat.id);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDeleteConfirmTarget({ type: 'category', id: cat.id, name: cat.name });
                       }}
                       className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
                       title={`Delete "${cat.name}"`}
@@ -1137,7 +1138,7 @@ export default function MenuManagement() {
                 {...item}
                 variant="vendor"
                 onEdit={handleEditItem}
-                onDelete={handleDeleteItem}
+                onDelete={(id, title) => setDeleteConfirmTarget({ type: 'item', id, name: title })}
                 onToggleAvailability={handleToggleAvailability}
               />
             </div>
@@ -1893,6 +1894,57 @@ export default function MenuManagement() {
                 {(isSaving || isUploadingImage) ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
                 <span>{isUploadingImage ? 'Uploading Image...' : isSaving ? 'Saving...' : 'Save Changes'}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gokul Construction Style Delete Confirmation Modal ────────────────────── */}
+      {deleteConfirmTarget && (
+        <div
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setDeleteConfirmTarget(null)}
+        >
+          <div
+            className="bg-white border border-black/10 rounded-[28px] max-w-sm w-full p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 mb-4 shadow-sm">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                Delete {deleteConfirmTarget.type === 'item' ? 'Item' : 'Category'}?
+              </h3>
+              <p className="text-sm text-slate-500 mt-2 font-medium leading-relaxed">
+                Are you sure you want to delete <span className="font-bold text-slate-800">&quot;{deleteConfirmTarget.name}&quot;</span>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 w-full mt-6">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmTarget(null)}
+                  className="flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting || isDeletingCategory}
+                  onClick={() => {
+                    const { type, id, name } = deleteConfirmTarget;
+                    setDeleteConfirmTarget(null);
+                    if (type === 'item') {
+                      handleDeleteItem(id, name);
+                    } else {
+                      handleDeleteCategory(id);
+                    }
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-rose-600/20 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {(isDeleting || isDeletingCategory) ? <Loader2 size={15} className="animate-spin" /> : null}
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

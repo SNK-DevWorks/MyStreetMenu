@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Heart, Phone, MessageCircle, MapPin, Share2, Flame, Clock, Star, X, Megaphone } from 'lucide-react';
 import { type FoodCardItem, type TimeframeType, FoodTypeDot } from '@/components/shared/item';
 import { useAnalytics } from '@/providers/analytics-provider';
+import { OfferCard } from '@/components/shared/offer-card';
 
 export interface AnnouncementItem {
   id: string;
@@ -15,6 +16,19 @@ export interface AnnouncementItem {
   endDate?: string;
 }
 
+export interface PublicOfferItem {
+  id: string;
+  title: string;
+  badge: string;  // "20% OFF", "₹50 OFF", "Buy 1 Get 1"
+  type: string;
+  targetType: string;
+  targetCount: number;
+  startTime: string | null;
+  endTime: string | null;
+  /** Resolved CDN banner URL from published JSON. null = use gradient default. */
+  banner: { image: string; alt: string } | null;
+}
+
 interface PublicMenuViewProps {
   vendorName?: string;
   vendorAddress?: string;
@@ -23,7 +37,56 @@ interface PublicMenuViewProps {
   mapUrl?: string | null;
   items?: FoodCardItem[];
   categories?: string[];
+  offers?: PublicOfferItem[];
   announcements?: AnnouncementItem[];
+}
+
+const CARD_COLOR_PALETTES = [
+  { bg: 'bg-[#E5DEFF]', border: 'border-purple-300/80', title: 'text-[#4C1D95]', desc: 'text-[#5B21B6]/95', badgeBg: 'bg-white/75', badgeText: 'text-[#5B21B6]', arcStroke: '#4C1D95' },
+  { bg: 'bg-[#FFEDD5]', border: 'border-orange-300/80', title: 'text-[#C2410C]', desc: 'text-[#9A3412]/95', badgeBg: 'bg-white/75', badgeText: 'text-[#9A3412]', arcStroke: '#C2410C' },
+  { bg: 'bg-[#DCFCE7]', border: 'border-emerald-300/80', title: 'text-[#15803D]', desc: 'text-[#166534]/95', badgeBg: 'bg-white/75', badgeText: 'text-[#166534]', arcStroke: '#15803D' },
+  { bg: 'bg-[#FFE4E6]', border: 'border-rose-300/80', title: 'text-[#BE123C]', desc: 'text-[#9F1239]/95', badgeBg: 'bg-white/75', badgeText: 'text-[#9F1239]', arcStroke: '#BE123C' },
+  { bg: 'bg-[#E0F2FE]', border: 'border-sky-300/80', title: 'text-[#0369A1]', desc: 'text-[#075985]/95', badgeBg: 'bg-white/75', badgeText: 'text-[#075985]', arcStroke: '#0369A1' },
+  { bg: 'bg-[#FEF3C7]', border: 'border-amber-300/80', title: 'text-[#B45309]', desc: 'text-[#92400E]/95', badgeBg: 'bg-white/75', badgeText: 'text-[#B45309]', arcStroke: '#B45309' },
+];
+
+function WhatsAppIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="100%"
+      height="100%"
+      fill="currentColor"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c-.001 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662a11.87 11.87 0 005.71 1.455h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413" />
+    </svg>
+  );
+}
+
+function GoogleMapsIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="100%" height="100%" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 1.74.5 3.37 1.41 4.74l5.59 8.26 5.59-8.26C18.5 12.37 19 10.74 19 9c0-3.87-3.13-7-7-7z" />
+      <path fill="#FBBC05" d="M12 2v7l5.59 4.74C18.5 12.37 19 10.74 19 9c0-3.87-3.13-7-7-7z" />
+      <path fill="#34A853" d="M12 22s3.5-5.17 5.59-8.26L12 9v13z" />
+      <path fill="#4285F4" d="M5 9c0 1.74.5 3.37 1.41 4.74L12 22V9H5z" />
+      <circle cx="12" cy="9" r="2.8" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
+function Google4ColorShareIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="100%" height="100%" className={className} xmlns="http://www.w3.org/2000/svg">
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="#4285F4" strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="#FBBC05" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="6" cy="12" r="3.2" fill="#4285F4" />
+      <circle cx="18" cy="5" r="3.2" fill="#EA4335" />
+      <circle cx="18" cy="19" r="3.2" fill="#34A853" />
+    </svg>
+  );
 }
 
 function getCategoryEmoji(catName: string): string {
@@ -43,6 +106,92 @@ function getCategoryEmoji(catName: string): string {
   return '🍢';
 }
 
+// ─── Public Offer Hero Carousel (Food App Banner Style) ─────────────────────
+
+function PublicOfferCarousel({ offers }: { offers: PublicOfferItem[] }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  // Auto-slide every 4 seconds if multiple offers present
+  useEffect(() => {
+    if (offers.length <= 1 || isPaused) return;
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % offers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [offers.length, isPaused]);
+
+  if (!offers || offers.length === 0) return null;
+
+  // Touch Swipe handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsPaused(true);
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsPaused(false);
+    if (touchStartX.current === null) return;
+    const diffX = e.changedTouches[0].clientX - touchStartX.current;
+    if (diffX < -40) {
+      // Swipe left -> Next slide
+      setActiveIndex((prev) => (prev + 1) % offers.length);
+    } else if (diffX > 40) {
+      // Swipe right -> Prev slide
+      setActiveIndex((prev) => (prev - 1 + offers.length) % offers.length);
+    }
+    touchStartX.current = null;
+  };
+
+  return (
+    <div
+      className="relative w-full mb-6 group select-none"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Hero Banner Container — Centered, Wide, Smooth Low Rounded Corners */}
+      <div className="relative w-full overflow-hidden rounded-2xl shadow-xs border border-orange-100/90 bg-slate-900">
+        <div
+          className="flex transition-transform duration-500 ease-out w-full"
+          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        >
+          {offers.map((offer, idx) => (
+            <div key={offer.id} className="w-full min-w-full shrink-0 overflow-hidden">
+              <OfferCard
+                offer={offer}
+                index={idx}
+                className="w-full min-h-[175px] sm:min-h-[210px] rounded-none border-none"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Floating Dot Indicators (Food App Carousel Style) */}
+        {offers.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-black/45 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-md">
+            {offers.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`transition-all duration-300 rounded-full cursor-pointer ${
+                  i === activeIndex
+                    ? 'w-5 h-2 bg-[#f77512] shadow-xs'
+                    : 'w-2 h-2 bg-white/60 hover:bg-white'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PublicMenuView({
   vendorName = 'Crispy Bites',
   vendorAddress = '123 Market Street · Open Now · ⭐ 4.8',
@@ -51,13 +200,43 @@ export default function PublicMenuView({
   mapUrl = null,
   items = [],
   categories = ['All Items'],
+  offers = [],
   announcements = [],
 }: PublicMenuViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Items');
   const [activeTimeframe, setActiveTimeframe] = useState<TimeframeType>('today');
   const [likedItems, setLikedItems] = useState<Record<string, boolean>>({});
+  const [selectedItemModal, setSelectedItemModal] = useState<FoodCardItem | null>(null);
+  const [isModalClosing, setIsModalClosing] = useState(false);
   const { track } = useAnalytics();
+
+  const handleItemClick = (item: FoodCardItem) => {
+    track('item_view', { itemId: item.id, itemName: item.title });
+    setIsModalClosing(false);
+    setSelectedItemModal(item);
+  };
+
+  const closeModal = () => {
+    if (!selectedItemModal || isModalClosing) return;
+    setIsModalClosing(true);
+    setTimeout(() => {
+      setSelectedItemModal(null);
+      setIsModalClosing(false);
+    }, 280);
+  };
+
+  // Lock scroll when item modal is open
+  useEffect(() => {
+    if (selectedItemModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedItemModal]);
 
   // Fire menu_view once on mount; also detect QR scan from URL params
   useEffect(() => {
@@ -151,54 +330,60 @@ export default function PublicMenuView({
             ))}
           </div>
 
-          <header className="flex flex-col gap-3 px-5 pb-2 pt-8">
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight text-center flex items-center justify-center gap-2">
-              {vendorName}
-            </h1>
+          <header className="flex flex-col gap-1.5 px-5 pb-2 pt-8">
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                {vendorName}
+              </h1>
 
-            {/* Quick Action Pill Buttons */}
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {mapUrl && (
-                <a
-                  href={mapUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleDirections}
-                  className="flex-1 bg-white border border-gray-200 text-gray-700 py-2 px-3 rounded-full text-xs font-bold flex justify-center items-center gap-1.5 shadow-xs hover:bg-gray-50 transition-colors"
+              {/* Official Icon-Only Quick Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                {phone && (
+                  <a
+                    href={`tel:${phone}`}
+                    className="w-9 h-9 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center shadow-xs transition-all active:scale-95"
+                    title="Call Us"
+                    aria-label="Call Us"
+                  >
+                    <Phone size={15} className="fill-white text-white" />
+                  </a>
+                )}
+                {whatsapp && (
+                  <a
+                    href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleWhatsApp}
+                    className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-xs transition-all active:scale-95 p-2"
+                    title="WhatsApp"
+                    aria-label="WhatsApp"
+                  >
+                    <WhatsAppIcon className="w-4 h-4 fill-white" />
+                  </a>
+                )}
+                {mapUrl && (
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleDirections}
+                    className="w-9 h-9 rounded-full bg-white border border-gray-200/90 hover:bg-rose-50 flex items-center justify-center shadow-2xs transition-all active:scale-95 p-1.5"
+                    title="Location"
+                    aria-label="Location"
+                  >
+                    <GoogleMapsIcon className="w-5 h-5" />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="w-9 h-9 rounded-full bg-white border border-gray-200/90 hover:bg-gray-50 flex items-center justify-center shadow-2xs transition-all active:scale-95 cursor-pointer p-2"
+                  title="Share Menu"
+                  aria-label="Share Menu"
                 >
-                  <MapPin size={14} className="text-[#f77512]" />
-                  <span>Location</span>
-                </a>
-              )}
-              {phone && (
-                <a
-                  href={`tel:${phone}`}
-                  className="flex-1 bg-white border border-gray-200 text-gray-700 py-2 px-3 rounded-full text-xs font-bold flex justify-center items-center gap-1.5 shadow-xs hover:bg-gray-50 transition-colors"
-                >
-                  <Phone size={14} className="text-gray-700" />
-                  <span>Call Us</span>
-                </a>
-              )}
-              {whatsapp && (
-                <a
-                  href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleWhatsApp}
-                  className="flex-1 bg-white border border-gray-200 text-emerald-700 py-2 px-3 rounded-full text-xs font-bold flex justify-center items-center gap-1.5 shadow-xs hover:bg-emerald-50 transition-colors"
-                >
-                  <MessageCircle size={14} className="text-emerald-600" />
-                  <span>WhatsApp</span>
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={handleShare}
-                className="bg-white border border-gray-200 text-gray-700 p-2 rounded-full shadow-xs hover:bg-gray-50 transition-colors flex items-center justify-center shrink-0"
-                title="Share Menu"
-              >
-                <Share2 size={14} className="text-gray-600" />
-              </button>
+                  <Google4ColorShareIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </header>
         </div>
@@ -224,89 +409,31 @@ export default function PublicMenuView({
             </div>
           </div>
 
-          {/* Announcements */}
+          {/* ── 1. ANNOUNCEMENTS (Slim Centered Notification Bar Style) ── */}
           {announcements && announcements.length > 0 && isAllCategory && !searchQuery && (
-            <div className="mb-7 flex flex-col gap-5 pt-2">
-              {announcements.map((ann) => {
-                const isOffer = ann.type === 'offer';
-                if (isOffer) {
-                  return (
-                    <div key={ann.id} className="relative w-full min-h-[140px] sm:min-h-[155px] rounded-2xl sm:rounded-3xl bg-[#FFEDD5] border-2 border-orange-300/80 shadow-xs flex flex-row items-center justify-between p-4 sm:p-5 pt-6 sm:pt-7 transition-all hover:shadow-md mt-2">
-                      <div className="absolute -top-3.5 left-4 sm:left-5 bg-gradient-to-r from-[#C2410C] to-[#EA580C] text-white text-[10px] sm:text-[11px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md z-30 flex items-center gap-1.5 border-2 border-white">
-                        <Flame size={12} className="fill-white text-white" />
-                        <span>SPECIAL OFFER</span>
-                      </div>
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.08]">
-                        <svg width="100%" height="100%" viewBox="0 0 340 144" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="240" cy="72" r="70" stroke="#C2410C" strokeWidth="2.5" />
-                          <circle cx="240" cy="72" r="95" stroke="#C2410C" strokeWidth="2.5" />
-                        </svg>
-                      </div>
-                      <div className="flex flex-col z-10 w-[68%] text-left justify-between">
-                        <h3 className="text-[#6C1D07] text-2xl sm:text-3xl font-black leading-[1.15] mb-2 tracking-tight drop-shadow-xs capitalize">{ann.title}</h3>
-                        {ann.description && <p className="text-[#7C2D12] text-xs sm:text-sm font-bold leading-relaxed mb-2.5 line-clamp-2">{ann.description}</p>}
-                        {ann.endDate && (
-                          <span className="text-[10px] sm:text-xs font-bold text-[#9A3412] bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg inline-block shadow-2xs border border-orange-200/60">
-                            Valid Until <strong className="text-[#C2410C] font-black">{new Date(ann.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</strong>
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative z-10 w-[28%] flex justify-end items-center pointer-events-none shrink-0">
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
-                          <div className="absolute inset-0 bg-orange-300/40 rounded-full blur-xl" />
-                          <svg width="100%" height="100%" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="z-10">
-                            <defs><linearGradient id={`offerGrad-${ann.id}`} x1="30" y1="30" x2="170" y2="170" gradientUnits="userSpaceOnUse"><stop stopColor="#F97316" /><stop offset="1" stopColor="#EA580C" /></linearGradient></defs>
-                            <rect x="40" y="40" width="120" height="120" rx="28" fill={`url(#offerGrad-${ann.id})`} transform="rotate(-10 100 100)" />
-                            <circle cx="75" cy="75" r="10" fill="#FFEAD8" />
-                            <path d="M90 120 L135 75" stroke="#FFFFFF" strokeWidth="10" strokeLinecap="round" />
-                            <circle cx="95" cy="80" r="8" fill="#FFFFFF" />
-                            <circle cx="130" cy="115" r="8" fill="#FFFFFF" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <div key={ann.id} className="relative w-full bg-gradient-to-br from-[#EBF4FF] to-[#E0E7FF] rounded-2xl sm:rounded-3xl p-4 sm:p-5 pt-6 sm:pt-7 shadow-xs border-2 border-indigo-100 flex flex-row items-center justify-between gap-3 transition-all hover:shadow-md min-h-[130px] mt-2">
-                    <div className="absolute -top-3.5 left-4 sm:left-5 bg-gradient-to-r from-[#1E1B4B] to-[#312E81] text-white text-[10px] sm:text-[11px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md z-30 flex items-center gap-1.5 border-2 border-white">
-                      <Megaphone size={12} className="text-white" />
-                      <span>ANNOUNCEMENT</span>
-                    </div>
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-44 h-44 bg-white opacity-40 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-36 h-36 bg-blue-300 opacity-20 rounded-full blur-2xl pointer-events-none" />
-                    <div className="flex flex-col z-10 w-[70%] text-left justify-between">
-                      <h3 className="text-[#1E1B4B] text-xl sm:text-2xl font-black leading-snug tracking-tight mb-1.5">&ldquo;{ann.title}&rdquo;</h3>
-                      {ann.description && <p className="text-slate-600 text-xs sm:text-sm font-semibold leading-relaxed line-clamp-2">{ann.description}</p>}
-                    </div>
-                    <div className="relative z-10 w-[28%] flex justify-end items-center pointer-events-none shrink-0">
-                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
-                        <div className="absolute inset-0 bg-yellow-200/40 rounded-full blur-xl" />
-                        <svg width="100%" height="100%" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="z-10">
-                          <defs>
-                            <linearGradient id={`bellGrad-${ann.id}`} x1="50" y1="20" x2="150" y2="160" gradientUnits="userSpaceOnUse"><stop stopColor="#FDE047" /><stop offset="1" stopColor="#EAB308" /></linearGradient>
-                            <linearGradient id={`bellBtmGrad-${ann.id}`} x1="40" y1="140" x2="160" y2="140" gradientUnits="userSpaceOnUse"><stop stopColor="#FACC15" /><stop offset="1" stopColor="#CA8A04" /></linearGradient>
-                            <linearGradient id={`clapperGrad-${ann.id}`} x1="85" y1="150" x2="115" y2="180" gradientUnits="userSpaceOnUse"><stop stopColor="#F59E0B" /><stop offset="1" stopColor="#B45309" /></linearGradient>
-                            <filter id={`dropShadow-${ann.id}`} x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="12" stdDeviation="15" floodOpacity="0.15" floodColor="#4338CA" /></filter>
-                          </defs>
-                          <g filter={`url(#dropShadow-${ann.id})`}>
-                            <path d="M100 25 C85 25 85 45 100 45 C115 45 115 25 100 25 Z" fill="#CA8A04" />
-                            <path d="M100 29 C92 29 92 41 100 41 C108 41 108 29 100 29 Z" fill="#FEF08A" />
-                            <path d="M100 40 C60 40 55 90 50 120 C45 145 35 150 35 150 L165 150 C165 150 155 145 150 120 C145 90 140 40 100 40 Z" fill={`url(#bellGrad-${ann.id})`} />
-                            <path d="M95 43 C65 45 60 90 56 120 C54 135 48 145 42 148 C55 130 65 100 70 60 C72 48 85 43 95 43 Z" fill="#FEF08A" opacity="0.6" />
-                            <path d="M30 145 L170 145 C175 145 175 155 170 155 L30 155 C25 155 25 145 30 145 Z" fill={`url(#bellBtmGrad-${ann.id})`} />
-                            <path d="M32 147 L168 147" stroke="#FEF08A" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-                            <circle cx="100" cy="165" r="15" fill={`url(#clapperGrad-${ann.id})`} />
-                            <circle cx="95" cy="160" r="4" fill="#FEF08A" opacity="0.8" />
-                          </g>
-                        </svg>
-                      </div>
-                    </div>
+            <div className="mb-4 flex flex-col gap-2">
+              {announcements.map((ann) => (
+                <div
+                  key={ann.id}
+                  className="w-full bg-gradient-to-r from-indigo-50/95 via-blue-50/90 to-indigo-50/95 border border-indigo-200/80 rounded-2xl px-3.5 py-2.5 shadow-2xs flex items-center justify-center gap-2.5 transition-all hover:border-indigo-300 active:scale-[0.99]"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Megaphone size={13} />
                   </div>
-                );
-              })}
+                  <div className="flex items-center justify-center gap-2 min-w-0 text-center">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/90 px-1.5 py-0.5 rounded-md shrink-0">Notice</span>
+                    <h4 className="text-xs sm:text-sm font-black text-indigo-950 truncate leading-tight">{ann.title}</h4>
+                    {ann.description && (
+                      <p className="text-[11px] text-indigo-900/80 font-semibold truncate leading-tight hidden sm:inline">&ndash; {ann.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
+
+          {/* ── OFFERS HERO CAROUSEL ── */}
+          {isAllCategory && !searchQuery && <PublicOfferCarousel offers={offers} />}
 
           {/* Categories Horizontal Scroll */}
           <div className="mb-6 overflow-x-auto no-scrollbar -mx-5 px-5 pt-2 pb-2">
@@ -342,7 +469,7 @@ export default function PublicMenuView({
                 {todaysSpecialsList.map((item) => {
                   const isLiked = !!likedItems[item.id];
                   return (
-                    <div key={item.id} onClick={() => track('item_view', { itemId: item.id, itemName: item.title })} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
+                    <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
                       <div className="relative h-[120px] w-full bg-gray-50 overflow-hidden p-1">
                         {item.foodType && (<span className="absolute top-2 left-2 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
                         <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2 right-2 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
@@ -353,8 +480,20 @@ export default function PublicMenuView({
                       <div className="flex flex-col flex-1 p-2.5">
                         <span className="text-[8px] font-black text-[#B91C1C] tracking-widest uppercase mb-0.5">Special</span>
                         <h4 className="font-extrabold text-[12px] text-gray-900 leading-tight line-clamp-1 mb-0.5">{item.title}</h4>
-                        <p className="text-[10px] text-gray-400 font-medium line-clamp-1 mb-2.5">{item.description || 'Delicious & fresh'}</p>
-                        <span className="text-[13px] font-black text-gray-900 tracking-tight mt-auto">{item.price || '₹199'}</span>
+                        {item.description ? (
+                          <p className="text-[10px] text-gray-400 font-medium line-clamp-1 mb-2.5">{item.description}</p>
+                        ) : null}
+                        <div className="flex items-center gap-1.5 mt-auto">
+                          <span className="text-[13px] font-black text-gray-900 tracking-tight">
+                            {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : (item.price || '₹199')}
+                          </span>
+                          {item.hasDiscount && item.priceOriginal != null && (
+                            <span className="text-[10px] text-gray-400 line-through">₹{item.priceOriginal}</span>
+                          )}
+                          {item.resolvedOffer && (
+                            <span className="ml-auto text-[8px] font-black bg-[#f77512] text-white px-1.5 py-0.5 rounded-full">{item.resolvedOffer.badge}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -394,7 +533,7 @@ export default function PublicMenuView({
                 const badgeText = item.isTodaysSpecial ? "SPECIAL" : item.isBestseller ? "BESTSELLER" : item.badgeLabel;
                 const badgeColor = item.isTodaysSpecial ? "text-[#B91C1C]" : item.isBestseller ? "text-[#B45309]" : "text-[#EA580C]";
                 return (
-                  <div key={item.id} onClick={() => track('item_view', { itemId: item.id, itemName: item.title })} className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
+                  <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col relative group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden">
                     <div className="relative h-[120px] w-full bg-gray-50 overflow-hidden p-1">
                       {item.foodType && (<span className="absolute top-2 left-2 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
                       <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2 right-2 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
@@ -405,8 +544,20 @@ export default function PublicMenuView({
                     <div className="flex flex-col flex-1 p-2.5">
                       {badgeText && <span className={`text-[8px] font-black tracking-widest uppercase mb-0.5 ${badgeColor}`}>{badgeText}</span>}
                       <h4 className="font-extrabold text-[12px] text-gray-900 leading-tight line-clamp-1 mb-0.5">{item.title}</h4>
-                      <p className="text-[10px] text-gray-400 font-medium line-clamp-1 mb-2.5">{item.description || 'Delicious & fresh'}</p>
-                      <span className="text-[13px] font-black text-gray-900 tracking-tight mt-auto">{item.price || '₹199'}</span>
+                      {item.description ? (
+                        <p className="text-[10px] text-gray-400 font-medium line-clamp-1 mb-2.5">{item.description}</p>
+                      ) : null}
+                      <div className="flex items-center gap-1.5 mt-auto">
+                        <span className="text-[13px] font-black text-gray-900 tracking-tight">
+                          {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : (item.price || '₹199')}
+                        </span>
+                        {item.hasDiscount && item.priceOriginal != null && (
+                          <span className="text-[10px] text-gray-400 line-through">₹{item.priceOriginal}</span>
+                        )}
+                        {item.resolvedOffer && (
+                          <span className="ml-auto text-[8px] font-black bg-[#f77512] text-white px-1.5 py-0.5 rounded-full">{item.resolvedOffer.badge}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -427,27 +578,54 @@ export default function PublicMenuView({
             ))}
           </div>
 
-          <div className="px-6 pt-5 pb-4 border-b border-gray-100">
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight mb-1">{vendorName}</h1>
-            <p className="text-xs text-gray-500 font-medium mb-4">{vendorAddress}</p>
+          <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">{vendorName}</h1>
 
-            {/* Action buttons */}
-            <div className="flex flex-col gap-2">
-              {mapUrl && (
-                <a href={mapUrl} target="_blank" rel="noopener noreferrer" onClick={handleDirections} className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-[#f77512] transition-colors">
-                  <MapPin size={16} className="text-[#f77512]" /><span>Get Directions</span>
-                </a>
-              )}
-              {phone && (
-                <a href={`tel:${phone}`} className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-[#f77512] transition-colors">
-                  <Phone size={16} className="text-gray-500" /><span>{phone}</span>
-                </a>
-              )}
-              {whatsapp && (
-                <a href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={handleWhatsApp} className="flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600 transition-colors">
-                  <MessageCircle size={16} className="text-emerald-500" /><span>WhatsApp</span>
-                </a>
-              )}
+              {/* Official Icon-Only Action Buttons */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {phone && (
+                  <a
+                    href={`tel:${phone}`}
+                    className="w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-all shadow-xs hover:scale-105 active:scale-95"
+                    title="Call"
+                  >
+                    <Phone size={15} className="fill-white text-white" />
+                  </a>
+                )}
+                {whatsapp && (
+                  <a
+                    href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleWhatsApp}
+                    className="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-all shadow-xs hover:scale-105 active:scale-95 p-1.5"
+                    title="WhatsApp"
+                  >
+                    <WhatsAppIcon className="w-4 h-4 fill-white" />
+                  </a>
+                )}
+                {mapUrl && (
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleDirections}
+                    className="w-8 h-8 rounded-full bg-white border border-gray-200/90 hover:bg-rose-50 flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 p-1.5"
+                    title="Location"
+                  >
+                    <GoogleMapsIcon className="w-4 h-4" />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="w-8 h-8 rounded-full bg-white border border-gray-200/90 hover:bg-gray-50 flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer p-1.5"
+                  title="Share Menu"
+                >
+                  <Google4ColorShareIcon className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -475,56 +653,39 @@ export default function PublicMenuView({
             })}
           </div>
 
-          {/* Share button */}
-          <div className="px-5 py-4 border-t border-gray-100">
-            <button type="button" onClick={handleShare} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
-              <Share2 size={15} className="text-gray-500" /> Share Menu
-            </button>
-          </div>
+
         </aside>
 
         {/* Main content area */}
         <main className="flex-1 min-w-0 px-8 xl:px-12 py-8 overflow-y-auto bg-[#FDF6F0]">
 
-          {/* Announcements row */}
+          {/* ── 1. ANNOUNCEMENTS (Desktop — Slim Centered Notification Bar Style) ── */}
           {announcements && announcements.length > 0 && isAllCategory && !searchQuery && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-8">
-              {announcements.map((ann) => {
-                const isOffer = ann.type === 'offer';
-                if (isOffer) {
-                  return (
-                    <div key={ann.id} className="relative w-full rounded-2xl bg-[#FFEDD5] border-2 border-orange-300/80 shadow-xs flex flex-row items-center justify-between p-5 pt-8 hover:shadow-md mt-3">
-                      <div className="absolute -top-3.5 left-5 bg-gradient-to-r from-[#C2410C] to-[#EA580C] text-white text-[11px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md z-30 flex items-center gap-1.5 border-2 border-white">
-                        <Flame size={12} className="fill-white text-white" /><span>SPECIAL OFFER</span>
-                      </div>
-                      <div className="flex flex-col z-10 flex-1">
-                        <h3 className="text-[#6C1D07] text-3xl font-black leading-tight mb-2 capitalize">{ann.title}</h3>
-                        {ann.description && <p className="text-[#7C2D12] text-sm font-bold mb-3 line-clamp-2">{ann.description}</p>}
-                        {ann.endDate && (
-                          <span className="text-xs font-bold text-[#9A3412] bg-white/90 px-3 py-1 rounded-lg inline-block border border-orange-200/60 w-fit">
-                            Valid Until <strong className="text-[#C2410C] font-black">{new Date(ann.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</strong>
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-28 h-28 shrink-0 flex items-center justify-center">
-                        <div className="text-6xl">🏷️</div>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <div key={ann.id} className="relative w-full bg-gradient-to-br from-[#EBF4FF] to-[#E0E7FF] rounded-2xl p-5 pt-8 border-2 border-indigo-100 flex flex-row items-center justify-between gap-4 hover:shadow-md mt-3">
-                    <div className="absolute -top-3.5 left-5 bg-gradient-to-r from-[#1E1B4B] to-[#312E81] text-white text-[11px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md z-30 flex items-center gap-1.5 border-2 border-white">
-                      <Megaphone size={12} className="text-white" /><span>ANNOUNCEMENT</span>
-                    </div>
-                    <div className="flex flex-col z-10 flex-1">
-                      <h3 className="text-[#1E1B4B] text-2xl font-black leading-snug tracking-tight mb-1.5">&ldquo;{ann.title}&rdquo;</h3>
-                      {ann.description && <p className="text-slate-600 text-sm font-semibold leading-relaxed line-clamp-2">{ann.description}</p>}
-                    </div>
-                    <div className="w-24 h-24 shrink-0 flex items-center justify-center text-5xl">🔔</div>
+            <div className="mb-6 flex flex-col gap-2.5 w-full">
+              {announcements.map((ann) => (
+                <div
+                  key={ann.id}
+                  className="w-full bg-gradient-to-r from-indigo-50/95 via-blue-50/90 to-indigo-50/95 border border-indigo-200/80 rounded-2xl px-4 py-3 shadow-2xs flex items-center justify-center gap-3.5 transition-all hover:border-indigo-300 active:scale-[0.99]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Megaphone size={15} />
                   </div>
-                );
-              })}
+                  <div className="flex items-center justify-center gap-2.5 min-w-0 text-center">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-md shrink-0">Notice</span>
+                    <h4 className="text-sm font-black text-indigo-950 truncate leading-tight">{ann.title}</h4>
+                    {ann.description && (
+                      <p className="text-xs text-indigo-900/80 font-semibold truncate leading-tight">&ndash; {ann.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── 2. OFFERS HERO CAROUSEL (Desktop — Full Width) ────────────── */}
+          {isAllCategory && !searchQuery && (
+            <div className="mb-8 w-full">
+              <PublicOfferCarousel offers={offers} />
             </div>
           )}
 
@@ -544,7 +705,7 @@ export default function PublicMenuView({
                 {todaysSpecialsList.map((item) => {
                   const isLiked = !!likedItems[item.id];
                   return (
-                    <div key={item.id} onClick={() => track('item_view', { itemId: item.id, itemName: item.title })} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden group">
+                    <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-orange-100 flex flex-col cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden group">
                       <div className="relative aspect-[4/3] w-full bg-gray-50 overflow-hidden p-1.5">
                         {item.foodType && (<span className="absolute top-2.5 left-2.5 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
                         <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2.5 right-2.5 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
@@ -552,11 +713,23 @@ export default function PublicMenuView({
                         </button>
                         {item.image ? (<img src={item.image} alt={item.title} className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-500" />) : (<div className="w-full h-full flex items-center justify-center text-4xl">{getCategoryEmoji(item.category || '')}</div>)}
                       </div>
-                      <div className="flex flex-col flex-1 p-3">
+                        <div className="flex flex-col flex-1 p-3">
                         <span className="text-[9px] font-black text-[#B91C1C] tracking-widest uppercase mb-0.5">Special</span>
                         <h4 className="font-extrabold text-[13px] text-gray-900 leading-tight line-clamp-1 mb-0.5">{item.title}</h4>
-                        <p className="text-[11px] text-gray-400 font-medium line-clamp-1 mb-2">{item.description || 'Delicious & fresh'}</p>
-                        <span className="text-sm font-black text-gray-900 tracking-tight mt-auto">{item.price || '₹199'}</span>
+                        {item.description ? (
+                          <p className="text-[11px] text-gray-400 font-medium line-clamp-1 mb-2">{item.description}</p>
+                        ) : null}
+                        <div className="flex items-center gap-2 mt-auto">
+                          <span className="text-sm font-black text-gray-900 tracking-tight">
+                            {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : (item.price || '₹199')}
+                          </span>
+                          {item.hasDiscount && item.priceOriginal != null && (
+                            <span className="text-[10px] text-gray-400 line-through">₹{item.priceOriginal}</span>
+                          )}
+                          {item.resolvedOffer && (
+                            <span className="ml-auto text-[9px] font-black bg-[#f77512] text-white px-1.5 py-0.5 rounded-full">{item.resolvedOffer.badge}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -596,7 +769,7 @@ export default function PublicMenuView({
                 const badgeText = item.isTodaysSpecial ? "SPECIAL" : item.isBestseller ? "BESTSELLER" : item.badgeLabel;
                 const badgeColor = item.isTodaysSpecial ? "text-[#B91C1C]" : item.isBestseller ? "text-[#B45309]" : "text-[#EA580C]";
                 return (
-                  <div key={item.id} onClick={() => track('item_view', { itemId: item.id, itemName: item.title })} className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden group">
+                  <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden group">
                     <div className="relative aspect-[4/3] w-full bg-gray-50 overflow-hidden p-1.5">
                       {item.foodType && (<span className="absolute top-2.5 left-2.5 z-10 p-0.5 bg-white/90 rounded-sm shadow-xs"><FoodTypeDot type={item.foodType} /></span>)}
                       <button type="button" onClick={(e) => toggleLike(item.id, e)} className="absolute top-2.5 right-2.5 p-1 bg-white/90 rounded-full z-10 text-gray-400 hover:text-red-500 transition-colors shadow-xs">
@@ -607,8 +780,20 @@ export default function PublicMenuView({
                     <div className="flex flex-col flex-1 p-3">
                       {badgeText && <span className={`text-[9px] font-black tracking-widest uppercase mb-0.5 ${badgeColor}`}>{badgeText}</span>}
                       <h4 className="font-extrabold text-[13px] text-gray-900 leading-tight line-clamp-1 mb-0.5">{item.title}</h4>
-                      <p className="text-[11px] text-gray-400 font-medium line-clamp-1 mb-2">{item.description || 'Delicious & fresh'}</p>
-                      <span className="text-sm font-black text-gray-900 tracking-tight mt-auto">{item.price || '₹199'}</span>
+                      {item.description ? (
+                        <p className="text-[11px] text-gray-400 font-medium line-clamp-1 mb-2">{item.description}</p>
+                      ) : null}
+                      <div className="flex items-center gap-2 mt-auto">
+                        <span className="text-sm font-black text-gray-900 tracking-tight">
+                          {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : (item.price || '₹199')}
+                        </span>
+                        {item.hasDiscount && item.priceOriginal != null && (
+                          <span className="text-[10px] text-gray-400 line-through">₹{item.priceOriginal}</span>
+                        )}
+                        {item.resolvedOffer && (
+                          <span className="ml-auto text-[9px] font-black bg-[#f77512] text-white px-1.5 py-0.5 rounded-full">{item.resolvedOffer.badge}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -618,9 +803,197 @@ export default function PublicMenuView({
         </main>
       </div>
 
+      {/* ── Zoomed Floating Item Detail Modal Widget (Apple Spring Animation) ── */}
+      {selectedItemModal && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto ${
+            isModalClosing ? 'apple-backdrop-out' : 'apple-backdrop-in'
+          }`}
+          onClick={closeModal}
+        >
+          <div
+            className={`relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-gray-100/80 overflow-hidden my-auto cursor-default ${
+              isModalClosing ? 'apple-card-out' : 'apple-card-in'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Banner Image Container */}
+            <div className="relative aspect-[4/3] w-full bg-slate-100 overflow-hidden">
+              {/* Top Floating Controls */}
+              <div className="absolute top-4 inset-x-4 z-20 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto">
+                  {selectedItemModal.foodType && (
+                    <span className="p-1 bg-white/90 backdrop-blur-md rounded-lg shadow-md flex items-center gap-1.5 px-2">
+                      <FoodTypeDot type={selectedItemModal.foodType} />
+                      <span className="text-[11px] font-bold text-slate-700 capitalize">
+                        {selectedItemModal.foodType}
+                      </span>
+                    </span>
+                  )}
+                  {selectedItemModal.category && (
+                    <span className="bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md">
+                      {selectedItemModal.category}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="p-2 bg-white/90 backdrop-blur-md text-slate-700 hover:text-slate-950 rounded-full shadow-md transition-all hover:scale-105 active:scale-95 pointer-events-auto cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X size={18} strokeWidth={2.5} />
+                </button>
+              </div>
+
+              {/* Offer / Special Badge Tag on Image bottom-left */}
+              {(selectedItemModal.resolvedOffer || selectedItemModal.isTodaysSpecial || selectedItemModal.isBestseller) && (
+                <div className="absolute bottom-3 left-4 z-20 flex items-center gap-1.5">
+                  {selectedItemModal.resolvedOffer ? (
+                    <span className="bg-[#f77512] text-white text-xs font-black px-3 py-1 rounded-full shadow-lg tracking-wide border border-white/30">
+                      🔥 {selectedItemModal.resolvedOffer.badge}
+                    </span>
+                  ) : selectedItemModal.isTodaysSpecial ? (
+                    <span className="bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg tracking-wide border border-white/30">
+                      ⭐ TODAY'S SPECIAL
+                    </span>
+                  ) : selectedItemModal.isBestseller ? (
+                    <span className="bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg tracking-wide border border-white/30">
+                      👑 BESTSELLER
+                    </span>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Dish Image or Emoji Fallback */}
+              {selectedItemModal.image ? (
+                <img
+                  src={selectedItemModal.image}
+                  alt={selectedItemModal.title}
+                  className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-7xl bg-orange-50/50">
+                  {getCategoryEmoji(selectedItemModal.category || '')}
+                </div>
+              )}
+            </div>
+
+            {/* Item Body Content */}
+            <div className="p-6 flex flex-col gap-4">
+              {/* Title & Like button */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight tracking-tight">
+                    {selectedItemModal.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => toggleLike(selectedItemModal.id, e)}
+                  className="p-2.5 bg-slate-100 hover:bg-rose-50 rounded-full text-slate-400 hover:text-rose-500 transition-colors shrink-0 cursor-pointer shadow-xs"
+                >
+                  <Heart
+                    size={20}
+                    className={likedItems[selectedItemModal.id] ? 'text-rose-500 fill-rose-500' : ''}
+                  />
+                </button>
+              </div>
+
+              {/* Price Tag Box */}
+              <div className="flex items-center justify-between bg-orange-50/80 border border-orange-200/70 p-3.5 rounded-2xl">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    {selectedItemModal.hasDiscount && selectedItemModal.priceFinal != null
+                      ? `₹${selectedItemModal.priceFinal}`
+                      : (selectedItemModal.price || '₹199')}
+                  </span>
+                  {selectedItemModal.hasDiscount && selectedItemModal.priceOriginal != null && (
+                    <span className="text-base text-slate-400 font-bold line-through">
+                      ₹{selectedItemModal.priceOriginal}
+                    </span>
+                  )}
+                </div>
+                {selectedItemModal.hasDiscount && selectedItemModal.priceOriginal != null && selectedItemModal.priceFinal != null && (
+                  <span className="bg-emerald-600 text-white text-xs font-extrabold px-2.5 py-1 rounded-full shadow-xs">
+                    Save ₹{selectedItemModal.priceOriginal - selectedItemModal.priceFinal}
+                  </span>
+                )}
+              </div>
+
+              {/* Description */}
+              {selectedItemModal.description ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Description
+                  </span>
+                  <p className="text-slate-600 font-medium text-sm sm:text-base leading-relaxed">
+                    {selectedItemModal.description}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{__html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .apple-backdrop-in {
+          animation: appleBackdropFadeIn 0.35s ease-out forwards;
+        }
+        .apple-backdrop-out {
+          animation: appleBackdropFadeOut 0.28s ease-in forwards;
+        }
+
+        .apple-card-in {
+          animation: appleSpringScaleIn 0.42s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+        }
+        .apple-card-out {
+          animation: appleSpringScaleOut 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+        }
+
+        @keyframes appleBackdropFadeIn {
+          from { background-color: rgba(2, 6, 23, 0); backdrop-filter: blur(0px); }
+          to { background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(12px); }
+        }
+        @keyframes appleBackdropFadeOut {
+          from { background-color: rgba(2, 6, 23, 0.7); backdrop-filter: blur(12px); }
+          to { background-color: rgba(2, 6, 23, 0); backdrop-filter: blur(0px); }
+        }
+
+        @keyframes appleSpringScaleIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.82) translateY(32px);
+            filter: blur(6px);
+          }
+          65% {
+            opacity: 1;
+            transform: scale(1.02) translateY(-2px);
+            filter: blur(0px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            filter: blur(0px);
+          }
+        }
+
+        @keyframes appleSpringScaleOut {
+          0% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            filter: blur(0px);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.86) translateY(24px);
+            filter: blur(4px);
+          }
+        }
       `}} />
     </div>
   );

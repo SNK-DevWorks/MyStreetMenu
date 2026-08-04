@@ -5,43 +5,32 @@ import { getPublicMenuSnapshot } from '@/queries';
 import { db } from '@/lib/db';
 import { shops } from '../../drizzle/schema/shops';
 import type { PublishStatus } from '../../drizzle/schema/shops';
+import type { Promotion, ResolvedOffer } from '../../drizzle/schema/promotions';
+import { getOfferImage } from '@/lib/images';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Semver-style schema version. Bump this if the JSON shape has breaking changes. */
-const SCHEMA_VERSION = 1 as const;
-
-/** R2 object key for a shop's published menu JSON. Uses shopId (UUID) — never slug. */
+const SCHEMA_VERSION = 2 as const;
 const getR2Key = (shopId: string) => `published/menus/${shopId}.json`;
 
 // ─── Retry Utility ────────────────────────────────────────────────────────────
 
-/**
- * Retries an async operation up to `maxAttempts` times with exponential backoff.
- * Most R2 / network failures are transient — this catches them before marking a
- * shop as "failed."
- *
- * Attempt delays: 500ms → 1000ms → 2000ms
- */
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxAttempts = 3,
   baseDelayMs = 500,
 ): Promise<T> {
   let lastError: unknown;
-
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (err) {
       lastError = err;
       if (attempt < maxAttempts) {
-        const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * Math.pow(2, attempt - 1)));
       }
     }
   }
-
   throw lastError;
 }
 
@@ -50,18 +39,146 @@ async function withRetry<T>(
 async function setPublishStatus(shopId: string, status: PublishStatus, publishedAt?: Date) {
   await db
     .update(shops)
-    .set({
-      publishStatus: status,
-      ...(publishedAt ? { lastPublishedAt: publishedAt } : {}),
-      updatedAt: new Date(),
-    })
+    .set({ publishStatus: status, ...(publishedAt ? { lastPublishedAt: publishedAt } : {}), updatedAt: new Date() })
     .where(eq(shops.id, shopId));
+}
+
+// ─── Offer Resolution ─────────────────────────────────────────────────────────
+
+/** Generate a human-readable badge string from an offer */
+function buildBadge(offerType: string, offerValue: number): string {
+  switch (offerType) {
+    case 'percentage': return `${offerValue}% OFF`;
+    case 'flat':       return `₹${offerValue} OFF`;
+    case 'bxgy':       return offerValue === 1 ? 'Buy 1 Get 1' : `Buy ${offerValue} Get ${offerValue}`;
+    default:           return 'Offer';
+  }
+}
+
+/**
+ * Resolves which single offer applies to each item, enforcing:
+ *   Specificity: Item > Category > All
+ *   Tie-break:   priority DESC → createdAt DESC (most recent wins)
+ *
+ * Returns a Map<itemId, ResolvedOffer>
+ */
+function resolveOffersForItems(
+  items: Array<{ id: string; categoryId: string; price: string }>,
+  offers: Promotion[],
+): Map<string, ResolvedOffer> {
+  const result = new Map<string, ResolvedOffer>();
+
+  // Only process active 'offer' type promotions with a valid offerType
+  const activeOffers = offers.filter(
+    (o) => o.isActive && o.type === 'offer' && o.offerType,
+  );
+
+  // Specificity scoring: item=3, category=2, all=1
+  const specificityScore = (targetType: string | null | undefined): number => {
+    if (targetType === 'item') return 3;
+    if (targetType === 'category') return 2;
+    return 1; // 'all' or null
+  };
+
+  for (const item of items) {
+    // Collect all offers that apply to this item
+    const applicable = activeOffers.filter((o) => {
+      const tt = o.targetType ?? 'all';
+      if (tt === 'all') return true;
+      if (tt === 'category') return o.targetIds?.includes(item.categoryId) ?? false;
+      if (tt === 'item') return o.targetIds?.includes(item.id) ?? false;
+      return false;
+    });
+
+    if (applicable.length === 0) continue;
+
+    // Sort: specificity DESC → priority DESC → createdAt DESC
+    applicable.sort((a, b) => {
+      const specDiff = specificityScore(b.targetType) - specificityScore(a.targetType);
+      if (specDiff !== 0) return specDiff;
+      const priDiff = (b.priority ?? 0) - (a.priority ?? 0);
+      if (priDiff !== 0) return priDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const winner = applicable[0];
+    const value = parseFloat(winner.offerValue ?? '0');
+
+    result.set(item.id, {
+      id: winner.id,
+      title: winner.title,
+      type: winner.offerType as ResolvedOffer['type'],
+      value,
+      badge: buildBadge(winner.offerType!, value),
+    });
+  }
+
+  return result;
+}
+
+/** Calculate final price from original price + resolved offer */
+function calculatePrice(
+  originalPrice: string,
+  resolvedOffer: ResolvedOffer | undefined,
+): { original: number; final: number; hasDiscount: boolean } {
+  const original = parseFloat(originalPrice);
+  if (!resolvedOffer || resolvedOffer.type === 'bxgy') {
+    return { original, final: original, hasDiscount: false };
+  }
+  let final = original;
+  if (resolvedOffer.type === 'percentage') {
+    final = Math.round(original * (1 - resolvedOffer.value / 100));
+  } else if (resolvedOffer.type === 'flat') {
+    final = Math.max(0, original - resolvedOffer.value);
+  }
+  return { original, final, hasDiscount: final !== original };
 }
 
 // ─── Published JSON Shape ─────────────────────────────────────────────────────
 
+export interface PublishedPrice {
+  original: number;
+  final: number;
+  hasDiscount: boolean;
+}
+
+export interface PublishedItem {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  /** Structured price — public menu renders these directly, no calculation needed */
+  price: PublishedPrice;
+  imageUrl: string | null;
+  foodType: string;
+  isBestSeller: boolean;
+  isSoldOut: boolean;
+  isTodaysSpecial: boolean;
+  sortOrder: number;
+  /** Single resolved offer or null — pre-computed at publish time */
+  resolvedOffer: ResolvedOffer | null;
+}
+
+export interface PublishedOfferStrip {
+  id: string;
+  title: string;
+  badge: string;
+  type: string;
+  targetType: string;
+  /** How many items/categories are targeted */
+  targetCount: number;
+  /** Resolved category or item names (e.g. ["Burgers", "Drinks"]) */
+  targetNames?: string[];
+  startTime: string | null;
+  endTime: string | null;
+  /**
+   * Structured banner — fully-resolved CDN URL at publish time.
+   * null when no banner was uploaded (card uses gradient default).
+   */
+  banner: { image: string; alt: string } | null;
+}
+
 export interface PublishedMenu {
-  /** Schema version — bump when the shape has breaking changes. */
   version: typeof SCHEMA_VERSION;
   publishedAt: string;
   shop: {
@@ -82,20 +199,11 @@ export interface PublishedMenu {
     id: string;
     name: string;
     sortOrder: number;
-    items: Array<{
-      id: string;
-      name: string;
-      slug: string;
-      description: string | null;
-      price: string;
-      imageUrl: string | null;
-      foodType: string;
-      isBestSeller: boolean;
-      isSoldOut: boolean;
-      isTodaysSpecial: boolean;
-      sortOrder: number;
-    }>;
+    items: PublishedItem[];
   }>;
+  /** Top-level offers for the Offers Strip UI */
+  offers: PublishedOfferStrip[];
+  /** Legacy: announcements & other promotions (non-offer type) */
   promotions: Array<{
     id: string;
     type: string;
@@ -107,6 +215,7 @@ export interface PublishedMenu {
   meta: {
     totalItems: number;
     totalCategories: number;
+    hasOffers: boolean;
     hasPromotions: boolean;
     hasBestSellers: boolean;
     hasTodaysSpecials: boolean;
@@ -116,26 +225,12 @@ export interface PublishedMenu {
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const publishService = {
-  /**
-   * Publishes (or un-publishes) a shop's public menu to Cloudflare R2.
-   *
-   * Behaviour:
-   *   - public + active  → PutObject: writes/replaces the JSON file in R2
-   *   - private or inactive → DeleteObject: removes the file so the CDN returns 404
-   *
-   * Retries the R2 upload up to 3 times (exponential backoff: 500ms → 1s → 2s).
-   * Updates `publishStatus` and `lastPublishedAt` on the shops row throughout.
-   *
-   * Throws on permanent failure so the fire-and-forget wrapper can log cleanly.
-   */
   async publishMenu(shopId: string): Promise<void> {
-    // Mark as in-progress immediately
     await setPublishStatus(shopId, 'publishing');
 
     try {
       const snapshot = await getPublicMenuSnapshot(shopId);
 
-      // Shop deleted out from under us — nothing to do
       if (!snapshot) {
         await setPublishStatus(shopId, 'idle');
         return;
@@ -147,20 +242,61 @@ export const publishService = {
       if (shop.menuVisibility === 'private' || !shop.isActive) {
         await withRetry(() =>
           getR2Client().send(
-            new DeleteObjectCommand({
-              Bucket: getR2Bucket(),
-              Key: getR2Key(shopId),
-            }),
+            new DeleteObjectCommand({ Bucket: getR2Bucket(), Key: getR2Key(shopId) }),
           ),
         );
         await setPublishStatus(shopId, 'idle');
         return;
       }
 
-      // ── Publish path ──────────────────────────────────────────────────────
-      const publishedAt = new Date();
+      // ── Resolve offers for all items at publish time ──────────────────────
+      const offerResolutionMap = resolveOffersForItems(snapshot.allItems, snapshot.promotions);
 
+      const publishedAt = new Date();
       const totalItems = snapshot.allItems.length;
+
+      // ── Build top-level offers strip ──────────────────────────────────────
+      const activeOffers = snapshot.promotions.filter(
+        (p) => p.isActive && p.type === 'offer' && p.offerType,
+      );
+
+      const offersStrip: PublishedOfferStrip[] = activeOffers.map((o) => {
+        const value = parseFloat(o.offerValue ?? '0');
+        const targetCount =
+          o.targetType === 'all'
+            ? totalItems
+            : (o.targetIds?.length ?? 0);
+
+        // Resolve target names for categories or items
+        let targetNames: string[] = [];
+        if (o.targetType === 'category' && o.targetIds?.length) {
+          targetNames = snapshot.categories
+            .filter((c) => o.targetIds!.includes(c.id))
+            .map((c) => c.name);
+        } else if (o.targetType === 'item' && o.targetIds?.length) {
+          targetNames = snapshot.allItems
+            .filter((i) => o.targetIds!.includes(i.id))
+            .map((i) => i.name);
+        }
+
+        // Resolve banner CDN URL at publish time (CDN-first — public menu gets full URL)
+        const bannerCdnUrl = o.bannerImage ? getOfferImage(o.bannerImage) : null;
+
+        return {
+          id: o.id,
+          title: o.title,
+          badge: buildBadge(o.offerType!, value),
+          type: o.offerType!,
+          targetType: o.targetType ?? 'all',
+          targetCount,
+          targetNames,
+          startTime: o.startTime ?? null,
+          endTime: o.endTime ?? null,
+          banner: bannerCdnUrl ? { image: bannerCdnUrl, alt: o.title } : null,
+        };
+      });
+
+      // ── Build payload ─────────────────────────────────────────────────────
       const payload: PublishedMenu = {
         version: SCHEMA_VERSION,
         publishedAt: publishedAt.toISOString(),
@@ -182,32 +318,40 @@ export const publishService = {
           id: cat.id,
           name: cat.name,
           sortOrder: cat.sortOrder,
-          items: cat.items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            slug: item.slug,
-            description: item.description ?? null,
-            price: item.price,
-            imageUrl: item.imageUrl ?? null,
-            foodType: item.foodType,
-            isBestSeller: item.isBestSeller,
-            isSoldOut: item.isSoldOut,
-            isTodaysSpecial: item.isTodaysSpecial,
-            sortOrder: item.sortOrder,
+          items: cat.items.map((item) => {
+            const resolved = offerResolutionMap.get(item.id);
+            return {
+              id: item.id,
+              name: item.name,
+              slug: item.slug,
+              description: item.description ?? null,
+              price: calculatePrice(item.price, resolved),
+              imageUrl: item.imageUrl ?? null,
+              foodType: item.foodType,
+              isBestSeller: item.isBestSeller,
+              isSoldOut: item.isSoldOut,
+              isTodaysSpecial: item.isTodaysSpecial,
+              sortOrder: item.sortOrder,
+              resolvedOffer: resolved ?? null,
+            };
+          }),
+        })),
+        offers: offersStrip,
+        promotions: snapshot.promotions
+          .filter((p) => p.type !== 'offer')
+          .map((p) => ({
+            id: p.id,
+            type: p.type,
+            title: p.title,
+            description: p.description ?? null,
+            startDate: p.startDate ?? null,
+            endDate: p.endDate ?? null,
           })),
-        })),
-        promotions: snapshot.promotions.map((p) => ({
-          id: p.id,
-          type: p.type,
-          title: p.title,
-          description: p.description ?? null,
-          startDate: p.startDate?.toISOString() ?? null,
-          endDate: p.endDate?.toISOString() ?? null,
-        })),
         meta: {
           totalItems,
           totalCategories: snapshot.categories.length,
-          hasPromotions: snapshot.promotions.length > 0,
+          hasOffers: offersStrip.length > 0,
+          hasPromotions: snapshot.promotions.filter((p) => p.type !== 'offer').length > 0,
           hasBestSellers: snapshot.allItems.some((i) => i.isBestSeller),
           hasTodaysSpecials: snapshot.allItems.some((i) => i.isTodaysSpecial),
         },
@@ -222,20 +366,15 @@ export const publishService = {
             Key: getR2Key(shopId),
             Body: body,
             ContentType: 'application/json',
-            // 60s fresh, 5-min stale-while-revalidate for resilience during peak traffic
             CacheControl: 'public, max-age=60, stale-while-revalidate=300',
           }),
         ),
       );
 
       await setPublishStatus(shopId, 'published', publishedAt);
-
-      console.info(`[publishService] Published menu for shop ${shopId} (${totalItems} items)`);
+      console.info(`[publishService] Published menu for shop ${shopId} (${totalItems} items, ${offersStrip.length} offers)`);
     } catch (error) {
-      // All retries exhausted — mark as failed so the dashboard can surface it
-      await setPublishStatus(shopId, 'failed').catch(() => {
-        // Status update failing is not worth throwing over
-      });
+      await setPublishStatus(shopId, 'failed').catch(() => {});
       console.error(`[publishService] Failed to publish menu for shop ${shopId}:`, error);
       throw error;
     }
@@ -243,30 +382,20 @@ export const publishService = {
 
   /**
    * Fire-and-forget wrapper used by Server Actions.
-   *
    * The vendor's action returns immediately after the DB write.
    * The publish runs in the background without blocking the response.
-   * Errors are fully handled inside publishMenu — nothing escapes here.
    */
   publishMenuBackground(shopId: string): void {
     void this.publishMenu(shopId).catch((error) => {
-      // publishMenu already logs — this catch is a safety net
       console.error(`[publishService] Unhandled background publish error for ${shopId}:`, error);
     });
   },
 
-  /**
-   * Removes the published menu from R2 entirely.
-   * Called when a shop is permanently deleted.
-   */
   async deletePublishedMenu(shopId: string): Promise<void> {
     try {
       await withRetry(() =>
         getR2Client().send(
-          new DeleteObjectCommand({
-            Bucket: getR2Bucket(),
-            Key: getR2Key(shopId),
-          }),
+          new DeleteObjectCommand({ Bucket: getR2Bucket(), Key: getR2Key(shopId) }),
         ),
       );
     } catch (error) {

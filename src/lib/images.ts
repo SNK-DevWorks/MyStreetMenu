@@ -40,3 +40,11 @@ export function getLogo(key: string | null | undefined): string {
 export function getCover(key: string | null | undefined): string {
   return getImageUrl(key);
 }
+
+/**
+ * Returns the public CDN URL for an offer banner image.
+ * key example: "shops/shop123/offers/Qd8Ka7Nm.webp"
+ */
+export function getOfferImage(key: string | null | undefined): string {
+  return getImageUrl(key);
+}

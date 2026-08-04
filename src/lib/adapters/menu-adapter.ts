@@ -9,7 +9,7 @@ export function toFoodCardItem(item: MenuItemWithCategory): FoodCardItem {
   return {
     id: item.id,
     title: item.name,
-    description: item.description ?? 'Freshly prepared vendor special.',
+    description: item.description ?? '',
     price: `₹${Number(item.price).toFixed(0)}`,
     image: item.imageUrl ? getMenuImage(item.imageUrl) || FOOD_IMAGE_FALLBACK : FOOD_IMAGE_FALLBACK,
     category: item.categoryName,
