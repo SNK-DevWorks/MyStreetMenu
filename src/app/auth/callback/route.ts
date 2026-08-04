@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const nextParam = requestUrl.searchParams.get('next');
+  // Capture email param if passed (used by resend flow to pre-populate UI)
+  const emailParam = requestUrl.searchParams.get('email');
   const origin = requestUrl.origin;
 
   // ── 1. Handle the OAuth / magic-link code exchange ──────────────────────────
@@ -58,9 +60,19 @@ export async function GET(request: NextRequest) {
 
     if (exchangeError) {
       console.error('[auth/callback] Code exchange failed:', exchangeError.message);
-      return NextResponse.redirect(
-        new URL('/vendor/login?error=auth_failed', origin)
-      );
+
+      // Distinguish expired/used links from generic failures so the login page
+      // can offer a targeted recovery UI (resend link / use another email).
+      const isExpiredLink =
+        exchangeError.message.toLowerCase().includes('expired') ||
+        exchangeError.message.toLowerCase().includes('invalid') ||
+        exchangeError.message.toLowerCase().includes('already used') ||
+        exchangeError.code === 'otp_expired';
+
+      const errorType = isExpiredLink ? 'link_expired' : 'auth_failed';
+      const errorUrl = new URL(`/vendor/login?error=${errorType}`, origin);
+      if (emailParam) errorUrl.searchParams.set('email', emailParam);
+      return NextResponse.redirect(errorUrl);
     }
 
     // ── 2. Fetch user (with retry for PWA cookie propagation lag) ────────────
