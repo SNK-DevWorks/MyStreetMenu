@@ -56,9 +56,20 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ── Fast path: skip session resolution for public routes ─────────────────
-  // This avoids unnecessary Supabase cookie parsing on pages that don't
-  // require authentication at all (e.g. public menu pages, static content).
   if (isPublicPath(pathname)) {
+    return NextResponse.next({ request });
+  }
+
+  // ── Fast path: skip for Next.js RSC prefetch requests ────────────────────
+  // Next.js fires multiple parallel prefetch requests for every visible <Link>.
+  // These show as dozens of GET /vendor/login, /vendor/signup etc in logs.
+  // Prefetch responses cannot perform meaningful redirects (Next.js ignores them),
+  // so skip the expensive getUser() call entirely for prefetches.
+  const isPrefetch =
+    request.headers.get('Next-Router-Prefetch') === '1' ||
+    request.headers.get('Purpose') === 'prefetch' ||
+    request.headers.get('Sec-Purpose') === 'prefetch';
+  if (isPrefetch) {
     return NextResponse.next({ request });
   }
 

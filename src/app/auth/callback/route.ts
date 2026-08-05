@@ -61,8 +61,17 @@ export async function GET(request: NextRequest) {
     if (exchangeError) {
       console.error('[auth/callback] Code exchange failed:', exchangeError.message);
 
-      // Distinguish expired/used links from generic failures so the login page
-      // can offer a targeted recovery UI (resend link / use another email).
+      // The client-side Supabase library may have already exchanged the code
+      // (it auto-handles ?code= params). Check if there's a valid session before
+      // showing an error — if so, redirect to the correct destination.
+      const { data: { user: existingUser } } = await supabase.auth.getUser();
+      if (existingUser) {
+        const onboarded = isUserOnboarded(existingUser);
+        const destination = onboarded ? '/vendor/dashboard' : VENDOR_ONBOARDING_PATH;
+        return NextResponse.redirect(new URL(destination, origin));
+      }
+
+      // Distinguish expired/used links from generic failures.
       const isExpiredLink =
         exchangeError.message.toLowerCase().includes('expired') ||
         exchangeError.message.toLowerCase().includes('invalid') ||

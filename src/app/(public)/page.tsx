@@ -19,30 +19,25 @@ export default function HomePage() {
   const supabase = createClient();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // ── OAuth code forwarding ─────────────────────────────────────────────────
-  // Supabase sometimes redirects the OAuth callback to root (/) instead of
-  // /auth/callback when the redirectTo URL isn't in its allowlist.
-  // When that happens, /?code=xxx lands here. We immediately forward
-  // all search params to /auth/callback so the exchange happens correctly.
-  // This runs BEFORE Supabase's own client-side hash/code processing.
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
+    const hasCode = params.has('code');
 
-    if (code) {
-      // Show loading screen immediately — don't flash the marketing page.
+    // If ?code= is present, Supabase's createBrowserClient automatically handles
+    // the PKCE exchange internally. We must NOT also forward to /auth/callback —
+    // doing so causes a double-exchange race condition (browser + server both try
+    // to use the one-time code) which produces "PKCE code verifier not found".
+    // Instead: show loading screen and wait for the SIGNED_IN event below.
+    if (hasCode) {
       setIsRedirecting(true);
-      // Forward the entire query string (code + any other params) to the
-      // server-side callback route which does the proper PKCE exchange.
-      router.replace(`/auth/callback?${params.toString()}`);
-      return;
+      // Clean the URL so a refresh doesn't re-trigger the exchange attempt
+      window.history.replaceState({}, '', '/');
     }
 
-    // ── Auth state listener for hash-based tokens (implicit flow fallback) ──
-    // If Supabase uses the implicit flow and puts tokens in the URL hash,
-    // the client library fires SIGNED_IN automatically. We catch it here.
+    // Listen for auth state changes.
+    // Supabase fires SIGNED_IN after it auto-exchanges the code (or after any login).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
@@ -55,22 +50,24 @@ export default function HomePage() {
       }
     );
 
-    // Check for an existing session (user navigates to / while already logged in).
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setIsRedirecting(true);
-        const dest = isOnboarded(session.user)
-          ? '/vendor/dashboard'
-          : '/vendor/onboarding';
-        router.replace(dest);
-      }
-    });
+    // Check for an existing session on first load (logged-in user navigates to /).
+    if (!hasCode) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setIsRedirecting(true);
+          const dest = isOnboarded(session.user)
+            ? '/vendor/dashboard'
+            : '/vendor/onboarding';
+          router.replace(dest);
+        }
+      });
+    }
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // While forwarding OAuth code or redirecting, show a clean loading screen.
+  // Show a clean loading screen while auth is processing or user is being redirected.
   if (isRedirecting) {
     return (
       <div className="min-h-screen bg-[#FFF0E5] flex items-center justify-center">
