@@ -15,10 +15,10 @@ interface TodaysSpecialsSectionProps {
 export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
   className = "mt-1 sm:mt-2"
 }) => {
-  const { shop, dbItems, menuLoading: isLoading, refetchMenu } = useVendor();
+  const { shop, dbItems, offers, menuLoading: isLoading, refetchMenu } = useVendor();
   const [isSaving, setIsSaving] = useState(false);
 
-  const items = React.useMemo(() => dbItems.map(toFoodCardItem), [dbItems]);
+  const items = React.useMemo(() => dbItems.map(item => toFoodCardItem(item, offers)), [dbItems, offers]);
   const specialItemIds = React.useMemo(
     () => items.filter(i => i.isTodaysSpecial).map(i => i.id),
     [items]
@@ -305,9 +305,21 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
                           <p className="text-gray-500 text-xs line-clamp-1 font-medium mt-0.5">
                             {item.description}
                           </p>
-                          <span className="text-xs font-black text-[#f77512] mt-0.5">
-                            {item.price}
-                          </span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs font-black text-[#f77512]">
+                              {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : item.price}
+                            </span>
+                            {item.hasDiscount && item.priceOriginal != null && (
+                              <span className="text-[11px] text-gray-400 line-through font-medium">
+                                ₹{item.priceOriginal}
+                              </span>
+                            )}
+                            {item.resolvedOffer?.badge && (
+                              <span className="bg-[#f77512] text-white text-[9.5px] font-black px-1.5 py-0.5 rounded-md shadow-2xs uppercase">
+                                {item.resolvedOffer.badge}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 

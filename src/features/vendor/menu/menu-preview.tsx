@@ -9,10 +9,10 @@ import PublicMenuView from '@/components/public/public-menu-view';
 type ViewMode = 'desktop' | 'mobile';
 
 export default function MenuPreview() {
-  const { shop, dbItems, categories: contextCategories, announcements: contextAnnouncements } = useVendor();
+  const { shop, dbItems, offers, categories: contextCategories, announcements: contextAnnouncements } = useVendor();
   const [viewMode, setViewMode] = useState<ViewMode>('mobile');
 
-  const items = useMemo(() => dbItems.map(toFoodCardItem), [dbItems]);
+  const items = useMemo(() => dbItems.map(item => toFoodCardItem(item, offers)), [dbItems, offers]);
   const categories = useMemo(() => ['All Items', ...contextCategories.map(c => c.name)], [contextCategories]);
   const announcements = useMemo(
     () =>

@@ -168,7 +168,7 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 // ——— Main Component ———————————————————————————————————————————————————————————
 
 export default function MenuManagement() {
-  const { shop: contextShop, categories: contextCategories, dbItems: contextDbItems, menuLoading: contextMenuLoading, refetchMenu } = useVendor();
+  const { shop: contextShop, categories: contextCategories, dbItems: contextDbItems, offers: contextOffers, menuLoading: contextMenuLoading, refetchMenu } = useVendor();
 
   // ——— Data state —————————————————————————————————————————————————————————————
   const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -266,7 +266,7 @@ export default function MenuManagement() {
         (item.description ?? '').toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     })
-    .map(toFoodCardItem);
+    .map((item) => toFoodCardItem(item, contextOffers));
 
   const allCategoryPills = ['All', ...categories.map((c) => c.name)];
 

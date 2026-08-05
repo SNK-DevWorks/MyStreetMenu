@@ -8,6 +8,7 @@ import type { OfferCardData } from '@/components/shared/offer-card';
 import { uploadMenuImageAction } from '@/actions/menu/upload-menu-image';
 
 import { useVendor } from '@/context/vendor-context';
+import type { MenuItemWithCategory } from '@/actions/shop/get-menu-data';
 import { createPromotionAction } from '@/actions/promotion/create-promotion';
 import { updatePromotionAction } from '@/actions/promotion/update-promotion';
 import { deletePromotionAction } from '@/actions/promotion/delete-promotion';
@@ -89,6 +90,30 @@ export default function OffersSection() {
   }, []);
 
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ id: string; title: string } | null>(null);
+
+  const activeOtherOffers = React.useMemo(() => {
+    if (!Array.isArray(offers)) return [];
+    return offers.filter(o => o.isActive && o.id !== editingOffer?.id);
+  }, [offers, editingOffer]);
+
+  const getItemActiveOffer = React.useCallback((item: MenuItemWithCategory) => {
+    return activeOtherOffers.find(o => {
+      const tt = o.targetType ?? 'all';
+      if (tt === 'all') return true;
+      if (tt === 'item' && o.targetIds?.includes(item.id)) return true;
+      if (tt === 'category' && (o.targetIds?.includes(item.categoryId) || (item.categoryName && o.targetIds?.includes(item.categoryName)))) return true;
+      return false;
+    });
+  }, [activeOtherOffers]);
+
+  const getCategoryActiveOffer = React.useCallback((cat: { id: string; name: string }) => {
+    return activeOtherOffers.find(o => {
+      const tt = o.targetType ?? 'all';
+      if (tt === 'all') return true;
+      if (tt === 'category' && (o.targetIds?.includes(cat.id) || o.targetIds?.includes(cat.name))) return true;
+      return false;
+    });
+  }, [activeOtherOffers]);
 
   useEffect(() => { setOffers(contextOffers); }, [contextOffers]);
 
@@ -695,17 +720,42 @@ export default function OffersSection() {
                   {formTargetType === 'category' && (
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Select Categories</label>
-                      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                      <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
                         {contextCategories.length === 0 ? (
                           <p className="text-sm text-gray-400 text-center py-4">No categories found</p>
-                        ) : contextCategories.map(cat => (
-                          <button key={cat.id} type="button" onClick={() => toggleTargetId(cat.id)} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-left ${formTargetIds.includes(cat.id) ? 'border-[#f77512] bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                            <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${formTargetIds.includes(cat.id) ? 'bg-[#f77512]' : 'border-2 border-gray-300'}`}>
-                              {formTargetIds.includes(cat.id) && <Check size={10} className="text-white" />}
-                            </div>
-                            <span className="text-sm font-semibold text-slate-800">{cat.name}</span>
-                          </button>
-                        ))}
+                        ) : contextCategories.map(cat => {
+                          const existingOffer = getCategoryActiveOffer(cat);
+                          const isAlreadyOffered = !!existingOffer;
+                          const isSelected = formTargetIds.includes(cat.id);
+
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              disabled={isAlreadyOffered}
+                              onClick={() => !isAlreadyOffered && toggleTargetId(cat.id)}
+                              className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                                isAlreadyOffered
+                                  ? 'border-amber-200/80 bg-amber-50/40 opacity-80 cursor-not-allowed'
+                                  : isSelected
+                                  ? 'border-[#f77512] bg-orange-50 cursor-pointer'
+                                  : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#f77512]' : 'border-2 border-gray-300'}`}>
+                                {isSelected && <Check size={10} className="text-white" />}
+                              </div>
+                              <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-slate-800 truncate">{cat.name}</span>
+                                {existingOffer && (
+                                  <span className="text-[9.5px] font-black text-amber-700 bg-amber-100 border border-amber-300/70 px-2 py-0.5 rounded-md shrink-0 uppercase">
+                                    In Offer: {existingOffer.title} ({buildBadgePreview(existingOffer.offerType ?? '', existingOffer.offerValue ?? '')})
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -714,20 +764,45 @@ export default function OffersSection() {
                   {formTargetType === 'item' && (
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Select Items</label>
-                      <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
+                      <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto pr-1">
                         {dbItems.length === 0 ? (
                           <p className="text-sm text-gray-400 text-center py-4">No items found</p>
-                        ) : dbItems.map(item => (
-                          <button key={item.id} type="button" onClick={() => toggleTargetId(item.id)} className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer text-left ${formTargetIds.includes(item.id) ? 'border-[#f77512] bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                            <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${formTargetIds.includes(item.id) ? 'bg-[#f77512]' : 'border-2 border-gray-300'}`}>
-                              {formTargetIds.includes(item.id) && <Check size={10} className="text-white" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-slate-800 truncate">{item.name}</p>
-                              <p className="text-[10px] text-gray-400">{item.categoryName} · ₹{item.price}</p>
-                            </div>
-                          </button>
-                        ))}
+                        ) : dbItems.map(item => {
+                          const existingOffer = getItemActiveOffer(item);
+                          const isAlreadyOffered = !!existingOffer;
+                          const isSelected = formTargetIds.includes(item.id);
+
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              disabled={isAlreadyOffered}
+                              onClick={() => !isAlreadyOffered && toggleTargetId(item.id)}
+                              className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left ${
+                                isAlreadyOffered
+                                  ? 'border-amber-200/80 bg-amber-50/40 opacity-85 cursor-not-allowed'
+                                  : isSelected
+                                  ? 'border-[#f77512] bg-orange-50 cursor-pointer'
+                                  : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#f77512]' : 'border-2 border-gray-300'}`}>
+                                {isSelected && <Check size={10} className="text-white" />}
+                              </div>
+                              <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold text-slate-800 truncate">{item.name}</p>
+                                  <p className="text-[10px] text-gray-400">{item.categoryName} · ₹{item.price}</p>
+                                </div>
+                                {existingOffer && (
+                                  <span className="text-[9.5px] font-black text-amber-700 bg-amber-100 border border-amber-300/70 px-2 py-0.5 rounded-md shrink-0 uppercase">
+                                    In Offer: {existingOffer.title} ({buildBadgePreview(existingOffer.offerType ?? '', existingOffer.offerValue ?? '')})
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
