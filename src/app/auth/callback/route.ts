@@ -58,9 +58,6 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    // [DIAG] Remove before release
-    console.log('[callback]', Date.now(), { step: 'exchanged', error: exchangeError?.message ?? null, origin });
-
     if (exchangeError) {
       console.error('[auth/callback] Code exchange failed:', exchangeError.message);
 
@@ -80,9 +77,6 @@ export async function GET(request: NextRequest) {
 
     // ── 2. Fetch user (with retry for PWA cookie propagation lag) ────────────
     const user = await getUserWithRetry(supabase);
-    // [DIAG] Remove before release
-    console.log('[callback]', Date.now(), { step: 'getUser', userId: user?.id ?? 'NULL' });
-
     if (!user) {
       // Couldn't confirm user even after retries — send back to login
       return NextResponse.redirect(
@@ -109,8 +103,6 @@ export async function GET(request: NextRequest) {
       destination = '/vendor/dashboard';
     }
 
-    // [DIAG] Remove before release
-    console.log('[callback]', Date.now(), { step: 'redirecting', destination, onboarded });
     return NextResponse.redirect(new URL(destination, origin));
   }
 

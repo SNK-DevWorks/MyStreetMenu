@@ -17,7 +17,11 @@ const VENDOR_ONBOARDING_PATH = '/vendor/onboarding';
 
 // Public paths that never need Supabase session resolution.
 // Add any fully-public routes here to avoid unnecessary cookie parsing.
-const PUBLIC_PREFIXES = ['/menu', '/about', '/contact', '/privacy', '/terms'];
+// IMPORTANT: /auth is excluded so the callback route can set the session cookie
+// without the middleware calling getUser() first (which would fail — the code
+// hasn't been exchanged yet).  The root '/' is also skipped for session
+// resolution; it handles its own redirect client-side (see public/page.tsx).
+const PUBLIC_PREFIXES = ['/menu', '/about', '/contact', '/privacy', '/terms', '/auth'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,8 +109,6 @@ export async function proxy(request: NextRequest) {
 
   // ── 2. Vendor Route Protection ────────────────────────────────────────────
   if (isVendorPath(pathname)) {
-    // [DIAG] Remove before release
-    console.log('[proxy]', Date.now(), pathname, { hasUser: !!user, onboarded });
     const isAuthPage = VENDOR_AUTH_PAGES.some((p) => pathname.startsWith(p));
     const isOnboardingPage = pathname.startsWith(VENDOR_ONBOARDING_PATH);
 

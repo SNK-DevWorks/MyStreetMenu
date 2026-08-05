@@ -176,15 +176,9 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
 
     // Check existing session — redirect if already logged in
     const checkSession = async () => {
-      // [DIAG] Remove before release
-      console.log('[login] checkSession', Date.now(), { nextParam });
       const { data: { session } } = await supabase.auth.getSession();
-      // [DIAG] Remove before release
-      console.log('[login] checkSession result', Date.now(), { hasSession: !!session?.user });
       if (session?.user) {
         const dest = getDestinationUrl(session.user, nextParam);
-        // [DIAG] Remove before release
-        console.log('[login] redirecting to', Date.now(), dest);
         router.replace(dest);
       }
     };
@@ -465,7 +459,11 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
   // ── Google OAuth ──────────────────────────────────────────────────────────
   const handleGoogleAuth = async () => {
     setIsGoogleLoading(true);
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    // Prefer NEXT_PUBLIC_SITE_URL so the redirect URL always matches the
+    // whitelisted URL in the Supabase dashboard (never a Vercel preview URL).
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
     const nextParam = searchParams.get("next") || "";
     const redirectUrl = `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`;
     const { error } = await supabase.auth.signInWithOAuth({

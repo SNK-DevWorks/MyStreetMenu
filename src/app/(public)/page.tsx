@@ -1,11 +1,87 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Play, Sparkles, ArrowRight, ChevronRight, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function isOnboarded(user: { user_metadata?: Record<string, unknown> } | null): boolean {
+  if (!user) return false;
+  const meta = user.user_metadata ?? {};
+  return Boolean(meta.onboarding_completed || (meta.shop_name && meta.phone));
+}
 
 export default function HomePage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // ── OAuth code forwarding ─────────────────────────────────────────────────
+  // Supabase sometimes redirects the OAuth callback to root (/) instead of
+  // /auth/callback when the redirectTo URL isn't in its allowlist.
+  // When that happens, /?code=xxx lands here. We immediately forward
+  // all search params to /auth/callback so the exchange happens correctly.
+  // This runs BEFORE Supabase's own client-side hash/code processing.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+      // Show loading screen immediately — don't flash the marketing page.
+      setIsRedirecting(true);
+      // Forward the entire query string (code + any other params) to the
+      // server-side callback route which does the proper PKCE exchange.
+      router.replace(`/auth/callback?${params.toString()}`);
+      return;
+    }
+
+    // ── Auth state listener for hash-based tokens (implicit flow fallback) ──
+    // If Supabase uses the implicit flow and puts tokens in the URL hash,
+    // the client library fires SIGNED_IN automatically. We catch it here.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          setIsRedirecting(true);
+          const dest = isOnboarded(session.user)
+            ? '/vendor/dashboard'
+            : '/vendor/onboarding';
+          router.replace(dest);
+        }
+      }
+    );
+
+    // Check for an existing session (user navigates to / while already logged in).
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setIsRedirecting(true);
+        const dest = isOnboarded(session.user)
+          ? '/vendor/dashboard'
+          : '/vendor/onboarding';
+        router.replace(dest);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // While forwarding OAuth code or redirecting, show a clean loading screen.
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-[#FFF0E5] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-[#FF5A00] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-500 font-medium">Signing you in…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen lg:h-screen w-full bg-[#fafafa] font-sans overflow-x-hidden lg:overflow-hidden flex flex-col justify-between">
       {/* Header Navigation */}
