@@ -105,6 +105,8 @@ export async function proxy(request: NextRequest) {
 
   // ── 2. Vendor Route Protection ────────────────────────────────────────────
   if (isVendorPath(pathname)) {
+    // [DIAG] Remove before release
+    console.log('[proxy]', Date.now(), pathname, { hasUser: !!user, onboarded });
     const isAuthPage = VENDOR_AUTH_PAGES.some((p) => pathname.startsWith(p));
     const isOnboardingPage = pathname.startsWith(VENDOR_ONBOARDING_PATH);
 

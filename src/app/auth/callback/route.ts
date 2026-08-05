@@ -51,12 +51,15 @@ export async function GET(request: NextRequest) {
   const nextParam = requestUrl.searchParams.get('next');
   // Capture email param if passed (used by resend flow to pre-populate UI)
   const emailParam = requestUrl.searchParams.get('email');
-  const origin = requestUrl.origin;
+  // Fix A: prefer NEXT_PUBLIC_SITE_URL so Vercel internal URLs never leak into redirects
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? requestUrl.origin;
 
   // ── 1. Handle the OAuth / magic-link code exchange ──────────────────────────
   if (code) {
     const supabase = await createClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    // [DIAG] Remove before release
+    console.log('[callback]', Date.now(), { step: 'exchanged', error: exchangeError?.message ?? null, origin });
 
     if (exchangeError) {
       console.error('[auth/callback] Code exchange failed:', exchangeError.message);
@@ -77,6 +80,8 @@ export async function GET(request: NextRequest) {
 
     // ── 2. Fetch user (with retry for PWA cookie propagation lag) ────────────
     const user = await getUserWithRetry(supabase);
+    // [DIAG] Remove before release
+    console.log('[callback]', Date.now(), { step: 'getUser', userId: user?.id ?? 'NULL' });
 
     if (!user) {
       // Couldn't confirm user even after retries — send back to login
@@ -104,6 +109,8 @@ export async function GET(request: NextRequest) {
       destination = '/vendor/dashboard';
     }
 
+    // [DIAG] Remove before release
+    console.log('[callback]', Date.now(), { step: 'redirecting', destination, onboarded });
     return NextResponse.redirect(new URL(destination, origin));
   }
 

@@ -176,9 +176,15 @@ export default function VendorAuthCard({ initialMode = "login" }: VendorAuthCard
 
     // Check existing session — redirect if already logged in
     const checkSession = async () => {
+      // [DIAG] Remove before release
+      console.log('[login] checkSession', Date.now(), { nextParam });
       const { data: { session } } = await supabase.auth.getSession();
+      // [DIAG] Remove before release
+      console.log('[login] checkSession result', Date.now(), { hasSession: !!session?.user });
       if (session?.user) {
         const dest = getDestinationUrl(session.user, nextParam);
+        // [DIAG] Remove before release
+        console.log('[login] redirecting to', Date.now(), dest);
         router.replace(dest);
       }
     };
