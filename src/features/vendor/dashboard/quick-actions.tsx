@@ -148,7 +148,7 @@ export const QuickActionsRow: React.FC = () => {
 
           if (action.href) {
             return (
-              <Link key={index} href={action.href} className="relative group cursor-pointer transition-all duration-200 w-full sm:flex-1 sm:min-w-[200px]">
+              <Link key={index} href={action.href} prefetch={false} className="relative group cursor-pointer transition-all duration-200 w-full sm:flex-1 sm:min-w-[200px]">
                 {content}
               </Link>
             );

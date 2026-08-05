@@ -19,21 +19,32 @@ export async function uploadMenuImageAction(
     const imageType = (formData.get('imageType') as ImageType | null) ?? 'menu';
     const format = (formData.get('format') as OutputFormat | null) ?? 'webp';
 
+    console.log('[uploadMenuImage] file:', file?.name, 'size:', file?.size, 'type:', file?.type, 'shopId:', shopId);
+
     if (!file || !(file instanceof File)) {
+      console.error('[uploadMenuImage] No file provided');
       return { success: false, error: 'No file provided.' };
     }
     if (!shopId) {
+      console.error('[uploadMenuImage] Missing shopId');
       return { success: false, error: 'Missing shopId.' };
     }
 
     // 3. Verify shop ownership
     const shop = await shopRepository.findById(shopId);
-    if (!shop) return { success: false, error: 'Shop not found.' };
-    if (shop.userId !== userId) return { success: false, error: 'Unauthorized.' };
+    if (!shop) {
+      console.error('[uploadMenuImage] Shop not found:', shopId);
+      return { success: false, error: 'Shop not found.' };
+    }
+    if (shop.userId !== userId) {
+      console.error('[uploadMenuImage] Unauthorized: userId mismatch');
+      return { success: false, error: 'Unauthorized.' };
+    }
 
     // 4. Convert File → Buffer for server-side processing
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    console.log('[uploadMenuImage] buffer size:', buffer.byteLength, 'bytes');
 
     // 5. Process + upload
     const { key } = await imageUploadService.processAndUploadImage(
@@ -44,9 +55,11 @@ export async function uploadMenuImageAction(
       format,
     );
 
+    console.log('[uploadMenuImage] Uploaded successfully, key:', key);
     return { success: true, data: { key } };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Image upload failed.';
+    console.error('[uploadMenuImage] Error:', message, error);
     return { success: false, error: message };
   }
 }

@@ -231,6 +231,7 @@ export const MostViewedCard: React.FC<{ analytics: DashboardAnalytics | null; lo
         </div>
         <Link
           href="/vendor/menu?tab=preview"
+          prefetch={false}
           className="bg-slate-900 hover:bg-black text-white text-xs font-extrabold tracking-wide px-4.5 py-2 sm:px-5 sm:py-2.5 rounded-full w-max mt-1.5 sm:mt-2 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 inline-block"
         >
           View Menu
@@ -265,14 +266,13 @@ function saveAnalyticsCache(data: DashboardAnalytics) {
 }
 
 export const StatsCards: React.FC = () => {
-  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return loadCachedAnalytics();
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return loadCachedAnalytics() === null; // Only show spinner on cache miss
-  });
+  // Always start with null/true to match the server-rendered HTML.
+  // Reading localStorage in useState lazy init causes hydration mismatch because
+  // the server always returns null/true (no window), but the client may return
+  // a cached value — React panics when they don't match.
+  // Cache is applied in useEffect (after hydration) instead.
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // If we have a valid cache, show it immediately and refresh silently in background
