@@ -93,7 +93,7 @@ export const Header: React.FC = () => {
 
         {/* Left: Logo + Address trigger */}
         <div className="flex items-center gap-4 shrink-0 ml-4 lg:ml-12">
-          <Link href="/vendor/dashboard" className="flex items-center">
+          <Link href="/vendor/dashboard" prefetch={false} className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/text-logo.png" alt="MyStreetMenu" className="h-11 w-auto object-contain" />
           </Link>
@@ -169,6 +169,7 @@ export const Header: React.FC = () => {
                 <div className="border-t border-gray-100 px-5 py-3">
                   <Link
                     href="/vendor/settings"
+                    prefetch={false}
                     onClick={() => setOpen(false)}
                     className="text-[13px] font-semibold text-[#f77512] hover:underline"
                   >
@@ -196,7 +197,7 @@ export const Header: React.FC = () => {
 
         {/* Right: Profile */}
         <div className="flex items-center gap-8 shrink-0 pr-2">
-          <Link href="/vendor/settings" className="flex flex-col items-center justify-center gap-1 text-gray-800 hover:text-[#f77512] transition-colors">
+          <Link href="/vendor/settings" prefetch={false} className="flex flex-col items-center justify-center gap-1 text-gray-800 hover:text-[#f77512] transition-colors">
             <User className="w-[24px] h-[24px]" strokeWidth={1.5} />
             <span className="text-[12px] font-medium">Profile</span>
           </Link>
@@ -243,6 +244,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab }) => {
                 key={cat.id}
                 ref={(el) => { tabRefs.current[index] = el; }}
                 href={path}
+                prefetch={false}
                 className={`relative flex items-center gap-2 px-5 py-[14px] min-w-max transition-colors bg-[#fdf8f3] ${isActive ? 'text-[#f77512]' : 'text-[#5C677D] hover:text-gray-00'
                   }`}
               >
@@ -417,6 +419,7 @@ export const MobileVendorHeader: React.FC<{ activeTab: string }> = ({ activeTab 
                   <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50">
                     <Link
                       href="/vendor/settings"
+                      prefetch={false}
                       onClick={() => setOpen(false)}
                       className="text-[12px] font-bold text-[#f77512] hover:underline"
                     >
@@ -431,6 +434,7 @@ export const MobileVendorHeader: React.FC<{ activeTab: string }> = ({ activeTab 
           {/* User Profile Avatar Icon */}
           <Link
             href="/vendor/settings"
+            prefetch={false}
             className="w-9 h-9 rounded-full bg-[#1f114a] text-white flex items-center justify-center shrink-0 shadow-xs border border-gray-200 hover:scale-105 transition-transform"
           >
             <User className="w-4.5 h-4.5 text-white" strokeWidth={2} />
@@ -451,6 +455,7 @@ export const MobileVendorHeader: React.FC<{ activeTab: string }> = ({ activeTab 
               <Link
                 key={cat.id}
                 href={path}
+                prefetch={false}
                 className={`flex items-center justify-center px-1.5 py-2 rounded-xl text-[12.5px] font-bold transition-all text-center w-full min-w-0 ${
                   isActive
                     ? 'bg-[#f77512] text-white shadow-xs font-bold'
@@ -502,6 +507,7 @@ function VendorSubNavContent({ pathname, currentSubNav }: { pathname: string; cu
           <Link
             key={item.id}
             href={`${pathname}?tab=${item.id}`}
+            prefetch={false}
             className={`relative flex-1 md:flex-initial flex items-center justify-center md:justify-start gap-1 sm:gap-2 md:gap-3.5 text-center md:text-left transition-all duration-200 group py-2 px-1 xs:px-2 sm:px-3 md:py-3 md:px-4 rounded-lg sm:rounded-xl md:rounded-2xl cursor-pointer whitespace-nowrap min-w-0 md:w-full ${
               isActive
                 ? 'bg-[#FFEAD8] text-[#f77512] font-extrabold border border-orange-200/80 shadow-2xs'
