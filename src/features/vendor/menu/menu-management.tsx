@@ -26,6 +26,68 @@ import { uploadMenuImageAction } from '@/actions/menu/upload-menu-image';
 import { createMenuItemsBatchAction } from '@/actions/menu/create-menu-batch';
 import { getMenuImage } from '@/lib/images';
 
+// ─── Client-side image compression ───────────────────────────────────────────
+// Compresses an image to under MAX_UPLOAD_BYTES using Canvas before sending
+// to the server action. This ensures we never hit the 1 MB body size limit
+// even for large camera photos (4+ MB).
+const MAX_UPLOAD_BYTES = 900 * 1024; // 900 KB — safe margin under 1 MB limit
+const MAX_DIMENSION = 1200; // px — server's sharp will re-process anyway
+
+async function compressImageForUpload(file: File): Promise<File> {
+  // Skip if already small enough
+  if (file.size <= MAX_UPLOAD_BYTES) return file;
+
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+
+      // Scale down to MAX_DIMENSION while preserving aspect ratio
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Try progressively lower quality until file fits under limit
+      const tryQuality = (quality: number) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+            if (blob.size <= MAX_UPLOAD_BYTES || quality <= 0.3) {
+              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            } else {
+              tryQuality(quality - 0.1);
+            }
+          },
+          'image/jpeg',
+          quality,
+        );
+      };
+      tryQuality(0.85);
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 import MenuLoading from '@/app/vendor/menu/loading';
 import { FoodCard, type FoodCardItem } from '@/components/shared/item';
 
@@ -427,19 +489,26 @@ export default function MenuManagement() {
 
   const handleDeleteCategory = (categoryId: string) => {
     const catToDelete = categories.find((c) => c.id === categoryId);
-    if (!catToDelete) return;
+    if (!catToDelete) {
+      setDeleteConfirmTarget(null);
+      return;
+    }
 
     startDeletingCategoryTransition(async () => {
-      const result = await deleteCategoryAction(categoryId);
-      if (result.success) {
-        setCategories((prev) => prev.filter((c) => c.id !== categoryId));
-        setDbItems((prev) => prev.filter((item) => item.categoryId !== categoryId));
-        if (selectedCategory === catToDelete.name) {
-          setSelectedCategory('All');
+      try {
+        const result = await deleteCategoryAction(categoryId);
+        if (result.success) {
+          setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+          setDbItems((prev) => prev.filter((item) => item.categoryId !== categoryId));
+          if (selectedCategory === catToDelete.name) {
+            setSelectedCategory('All');
+          }
+          notify(`Category "${catToDelete.name}" deleted.`);
+        } else {
+          notify(result.error ?? 'Failed to delete category', 'error');
         }
-        notify(`Category "${catToDelete.name}" deleted.`);
-      } else {
-        notify(result.error ?? 'Failed to delete category', 'error');
+      } finally {
+        setDeleteConfirmTarget(null);
       }
     });
   };
@@ -467,13 +536,28 @@ export default function MenuManagement() {
       if (formData.imageFile) {
         setIsUploadingImage(true);
         try {
+          // Compress client-side first so we never exceed the 1 MB Server Action limit.
+          // Camera photos can be 4-8 MB; this brings them to < 900 KB before sending.
+          const compressedFile = await compressImageForUpload(formData.imageFile);
+          console.log(`[upload] original: ${(formData.imageFile.size / 1024).toFixed(0)} KB → compressed: ${(compressedFile.size / 1024).toFixed(0)} KB`);
+
           const uploadFd = new FormData();
-          uploadFd.append('file', formData.imageFile);
+          uploadFd.append('file', compressedFile);
           uploadFd.append('shopId', shop.id);
           uploadFd.append('imageType', 'menu');
           uploadFd.append('format', 'webp');
 
-          const uploadResult = await uploadMenuImageAction(uploadFd);
+          let uploadResult;
+          try {
+            uploadResult = await uploadMenuImageAction(uploadFd);
+          } catch (networkErr) {
+            // Next.js throws (not returns) when the body limit is exceeded (413)
+            // or any other HTTP-level error. Catch it here so the item isn't
+            // saved silently without an image.
+            const msg = networkErr instanceof Error ? networkErr.message : 'Image upload failed.';
+            notify(`Upload error: ${msg}`, 'error');
+            return;
+          }
 
           if (!uploadResult.success || !uploadResult.data) {
             notify(uploadResult.error ?? 'Image upload failed.', 'error');
@@ -553,12 +637,16 @@ export default function MenuManagement() {
 
   const handleDeleteItem = (id: string, title: string) => {
     startDeletingTransition(async () => {
-      const result = await deleteMenuAction(id);
-      if (result.success) {
-        setDbItems((prev) => prev.filter((item) => item.id !== id));
-        notify(`"${title}" removed from menu.`);
-      } else {
-        notify(result.error ?? 'Failed to delete item', 'error');
+      try {
+        const result = await deleteMenuAction(id);
+        if (result.success) {
+          setDbItems((prev) => prev.filter((item) => item.id !== id));
+          notify(`"${title}" removed from menu.`);
+        } else {
+          notify(result.error ?? 'Failed to delete item', 'error');
+        }
+      } finally {
+        setDeleteConfirmTarget(null);
       }
     });
   };
@@ -1903,7 +1991,11 @@ export default function MenuManagement() {
       {deleteConfirmTarget && (
         <div
           className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setDeleteConfirmTarget(null)}
+          onClick={() => {
+            if (!isDeleting && !isDeletingCategory) {
+              setDeleteConfirmTarget(null);
+            }
+          }}
         >
           <div
             className="bg-white border border-black/10 rounded-[28px] max-w-sm w-full p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200"
@@ -1922,8 +2014,9 @@ export default function MenuManagement() {
               <div className="flex gap-3 w-full mt-6">
                 <button
                   type="button"
+                  disabled={isDeleting || isDeletingCategory}
                   onClick={() => setDeleteConfirmTarget(null)}
-                  className="flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+                  className="flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1932,7 +2025,6 @@ export default function MenuManagement() {
                   disabled={isDeleting || isDeletingCategory}
                   onClick={() => {
                     const { type, id, name } = deleteConfirmTarget;
-                    setDeleteConfirmTarget(null);
                     if (type === 'item') {
                       handleDeleteItem(id, name);
                     } else {
@@ -1942,7 +2034,7 @@ export default function MenuManagement() {
                   className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-rose-600/20 cursor-pointer flex items-center justify-center gap-2"
                 >
                   {(isDeleting || isDeletingCategory) ? <Loader2 size={15} className="animate-spin" /> : null}
-                  Delete
+                  <span>{(isDeleting || isDeletingCategory) ? 'Deleting...' : 'Delete'}</span>
                 </button>
               </div>
             </div>

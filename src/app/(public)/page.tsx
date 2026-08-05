@@ -111,12 +111,14 @@ export default function HomePage() {
           <div className="flex items-center gap-3 sm:gap-6 text-sm font-medium">
             <Link
               href="/vendor/login"
+              prefetch={false}
               className="text-gray-600 hover:text-gray-900 transition-colors text-xs sm:text-sm font-semibold px-2 py-1"
             >
               Log in
             </Link>
             <Link
               href="/vendor/signup"
+              prefetch={false}
               className="bg-[#ff6b2b] text-white text-xs sm:text-sm px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-lg hover:bg-[#e85a1f] transition-colors shadow-sm cursor-pointer inline-flex items-center justify-center font-bold whitespace-nowrap"
             >
               Start Free Trial
@@ -128,6 +130,7 @@ export default function HomePage() {
           <span>Introducing MyStreetMenu — Free for Your First 30 Days.</span>
           <Link
             href="/vendor/signup"
+            prefetch={false}
             className="text-[#ff6b2b] hover:underline inline-flex items-center gap-0.5 group font-semibold"
           >
             Claim{" "}
@@ -162,6 +165,7 @@ export default function HomePage() {
           <div className="flex flex-row items-center gap-2.5 sm:gap-4 mt-0.5 sm:mt-1">
             <Link
               href="/vendor/signup"
+              prefetch={false}
               className="flex-1 sm:flex-none bg-[#ff6b2b] text-white px-4 sm:px-7 py-3 sm:py-3.5 rounded-xl font-bold text-xs sm:text-base hover:bg-[#e85a1f] transition-all shadow-[0_8px_20px_-6px_rgba(255,107,43,0.5)] flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer text-center whitespace-nowrap"
             >
               <span>Start Free Trial</span>
@@ -172,6 +176,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/vendor/login"
+              prefetch={false}
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2.5 text-gray-700 font-semibold hover:text-gray-900 transition-colors group cursor-pointer py-2.5 sm:py-0 border sm:border-0 border-gray-200 rounded-xl sm:rounded-none bg-white sm:bg-transparent text-xs sm:text-sm whitespace-nowrap"
             >
               <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white shadow-xs sm:shadow-md flex items-center justify-center group-hover:shadow-lg transition-shadow border border-gray-100 text-[#ff6b2b] shrink-0">
