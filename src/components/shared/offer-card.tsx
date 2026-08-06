@@ -103,9 +103,9 @@ export function OfferCard({ offer, index, size = 'md', className = '' }: OfferCa
   const isSm = size === 'sm';
   const isFullWidth = className.includes('w-full');
   const cardWidth = isFullWidth ? 'w-full' : isSm ? 'w-72' : 'w-80';
-  const cardHeight = isFullWidth ? 'min-h-[175px] sm:min-h-[210px]' : isSm ? 'min-h-[155px]' : 'min-h-[175px]';
-  const cardPadding = isFullWidth ? 'p-4 sm:p-6' : isSm ? 'p-4 sm:p-5' : 'p-5 sm:p-6';
-  const titleSize = isFullWidth ? 'text-xl sm:text-2xl' : isSm ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl';
+  const cardHeight = isFullWidth ? 'min-h-[220px] xs:min-h-[245px] sm:min-h-[275px]' : isSm ? 'min-h-[155px]' : 'min-h-[175px]';
+  const cardPadding = isFullWidth ? 'p-5 sm:p-7' : isSm ? 'p-4 sm:p-5' : 'p-5 sm:p-6';
+  const titleSize = isFullWidth ? 'text-2xl xs:text-3xl sm:text-4xl' : isSm ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl';
   const roundedClass = className.includes('rounded-') ? '' : 'rounded-2xl';
 
   return (
@@ -140,15 +140,15 @@ export function OfferCard({ offer, index, size = 'md', className = '' }: OfferCa
       </div>
 
       {/* Content — always z-10, always white */}
-      <div className="flex flex-col z-10 w-[88%] justify-between h-full gap-2">
+      <div className="flex flex-col z-10 w-[92%] justify-between h-full gap-2.5">
         {/* High-Impact Promo Sticker Badge */}
         {offer.badge && (
-          <div className="self-start inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 text-xs sm:text-sm font-black px-3.5 py-1 rounded-xl shadow-lg border border-amber-300 uppercase tracking-wider transform -rotate-1 active:scale-95 transition-transform">
+          <div className="self-start inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 text-xs sm:text-base font-black px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-xl shadow-lg border border-amber-300 uppercase tracking-wider transform -rotate-1 active:scale-95 transition-transform">
             <span>{offer.badge}</span>
           </div>
         )}
 
-        <div className="flex flex-col gap-1.5 mt-auto">
+        <div className="flex flex-col gap-2 mt-auto">
           {/* Main Headline Title — Bigger & bolder */}
           <h3 className={`${titleSize} font-black text-white leading-tight tracking-tight drop-shadow-md uppercase`}>
             {offer.title}
@@ -156,12 +156,12 @@ export function OfferCard({ offer, index, size = 'md', className = '' }: OfferCa
 
           {/* Banner Subtitle Pills — Scope & Schedule */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] sm:text-[11px] font-black text-amber-300 bg-black/40 border border-amber-400/30 backdrop-blur-md px-2.5 py-0.5 rounded-lg shadow-xs tracking-wide uppercase">
+            <span className="text-[11px] sm:text-[12.5px] font-black text-amber-300 bg-black/50 border border-amber-400/40 backdrop-blur-md px-3 py-1 rounded-xl shadow-xs tracking-wide uppercase">
               {applyScope}
             </span>
 
             {offer.startTime && offer.endTime && (
-              <span className="text-[10px] sm:text-[11px] font-extrabold text-white/90 bg-black/40 border border-white/20 px-2.5 py-0.5 rounded-lg backdrop-blur-md shadow-xs">
+              <span className="text-[11px] sm:text-[12.5px] font-extrabold text-white/90 bg-black/50 border border-white/25 px-3 py-1 rounded-xl backdrop-blur-md shadow-xs">
                 ⏱️ {offer.startTime}–{offer.endTime}
               </span>
             )}

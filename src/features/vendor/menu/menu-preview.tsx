@@ -70,7 +70,7 @@ export default function MenuPreview() {
 
       {/* Preview Frame */}
       <div className={`mx-auto transition-all duration-300 ease-in-out ${
-        viewMode === 'mobile' ? 'w-full max-w-[420px]' : 'w-full max-w-[850px]'
+        viewMode === 'mobile' ? 'w-full max-w-[420px]' : 'w-full max-w-[1000px]'
       }`}>
         <PublicMenuView
           vendorName={shop?.name || 'Crispy Bites'}

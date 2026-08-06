@@ -11,7 +11,8 @@ export type PublicEventType =
   | 'whatsapp_click'
   | 'direction_click'
   | 'share_click'
-  | 'like_click';
+  | 'like_click'
+  | 'cart_click';
 
 interface QueuedEvent {
   shopId:     string;
