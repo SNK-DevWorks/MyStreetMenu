@@ -17,8 +17,9 @@ import { OfferCarousel } from './menu/carousel/offer-carousel';
 import { TodaysSpecialCarousel } from './menu/carousel/todays-special-carousel';
 import { ItemDetailSheet } from './menu/overlays/item-detail-sheet';
 import { AllSpecialsOverlay } from './menu/overlays/all-specials-overlay';
+import { CartSheet } from './menu/overlays/cart-sheet';
 import { useAnalytics } from '@/providers/analytics-provider';
-import type { AnnouncementItem, PublicOfferItem, PublicMenuViewProps } from './menu/types';
+import type { AnnouncementItem, PublicOfferItem, PublicMenuViewProps, ActiveOrder } from './menu/types';
 import type { FoodCardItem } from '@/components/shared/item';
 
 // Re-export types for external consumers
@@ -46,6 +47,18 @@ export default function PublicMenuView({
   // ── Local UI state ─────────────────────────────────────────────────────────
   const [selectedItem, setSelectedItem] = useState<FoodCardItem | null>(null);
   const [showAllSpecials, setShowAllSpecials] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
+  const [ordersList, setOrdersList] = useState<ActiveOrder[]>([]);
+
+  // Derive ordered cart items from itemQuantities for CartSheet
+  const cartItems = Object.entries(cart.itemQuantities)
+    .filter(([, qty]) => qty > 0)
+    .map(([itemId, quantity]) => {
+      const item = items.find(i => i.id === itemId);
+      return item ? { item, quantity } : null;
+    })
+    .filter((x): x is { item: FoodCardItem; quantity: number } => x !== null);
 
   // ── Analytics ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -322,11 +335,38 @@ export default function PublicMenuView({
         />
       )}
 
-      {/* ── Floating Cart Bar ── */}
+      {/* ── Floating Cart & Active Order Bar ── */}
       <FloatingCartBar
         cartSummary={cart.cartSummary}
-        onContinue={() => track('cart_click')}
+        activeOrder={activeOrder}
+        ordersList={ordersList}
+        onContinue={() => setShowCart(true)}
+        onViewActiveOrder={() => setShowCart(true)}
       />
+
+      {/* ── Cart & Active Order Sheet ── */}
+      {showCart && (
+        <CartSheet
+          cartItems={cartItems.length > 0 ? cartItems : (activeOrder?.items || [])}
+          cartSummary={cart.cartSummary}
+          vendorName={vendorName}
+          vendorAddress={vendorAddress}
+          whatsapp={whatsapp}
+          phone={phone}
+          onClose={() => setShowCart(false)}
+          onIncrement={cart.incrementItem}
+          onDecrement={cart.decrementItem}
+          onRemove={cart.removeItem}
+          onClearCart={cart.clearCart}
+          onOrderPlaced={(order) => {
+            setActiveOrder(order);
+            setOrdersList(prev => [...prev, order]);
+          }}
+          initialOrderStatus={cart.cartSummary.totalItemsCount === 0 && (ordersList.length > 0 || activeOrder) ? 'success' : 'idle'}
+          activeOrder={activeOrder}
+          ordersList={ordersList}
+        />
+      )}
     </div>
   );
 }

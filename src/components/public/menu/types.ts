@@ -49,3 +49,16 @@ export interface CartSummary {
   totalPrice: number;
   lastAddedItem: FoodCardItem | null;
 }
+
+export interface ActiveOrder {
+  tokenNumber: string;
+  itemsCount: number;
+  totalPrice: number;
+  totalSavings: number;
+  lastAddedItem: FoodCardItem | null;
+  items: Array<{ item: FoodCardItem; quantity: number }>;
+  customerName?: string;
+  tableNumber?: string;
+  customerPhone?: string;
+  specialInstructions?: string;
+}

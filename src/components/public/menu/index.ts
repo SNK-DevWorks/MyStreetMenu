@@ -34,3 +34,4 @@ export { FloatingCartBar } from './layout/floating-cart-bar';
 // Overlays
 export { ItemDetailSheet } from './overlays/item-detail-sheet';
 export { AllSpecialsOverlay } from './overlays/all-specials-overlay';
+export { CartSheet } from './overlays/cart-sheet';
