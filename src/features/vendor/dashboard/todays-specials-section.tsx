@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Search, X, Check, Utensils, Plus, Flame, Loader2 } from 'lucide-react';
-import { FoodCard, type FoodCardItem } from '@/components/shared/item';
+import { FoodCard, FoodTypeDot, type FoodCardItem } from '@/components/shared/item';
 import { useVendor } from '@/context/vendor-context';
 import { getMenuDataAction } from '@/actions/shop/get-menu-data';
 import { updateTodaysSpecialsAction } from '@/actions/menu/update-todays-specials';
@@ -27,6 +27,7 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalRefreshing, setIsModalRefreshing] = useState(false);
   const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -44,12 +45,20 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
     };
   }, [isModalOpen]);
 
-  // Open modal and sync temporary selection
-  const handleOpenModal = () => {
+  // Open modal and sync temporary selection + refresh menu items from server
+  const handleOpenModal = async () => {
     setTempSelectedIds([...specialItemIds]);
     setSearchQuery('');
     setSelectedCategory('All');
     setIsModalOpen(true);
+    setIsModalRefreshing(true);
+    try {
+      await refetchMenu();
+    } catch (err) {
+      console.error("Failed to refresh menu items on modal open:", err);
+    } finally {
+      setIsModalRefreshing(false);
+    }
   };
 
   // Toggle selection inside modal
@@ -184,15 +193,16 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
             {currentSpecials.map(food => (
-              <FoodCard
-                key={food.id}
-                {...food}
-                isTodaysSpecial={true}
-                variant="customer"
-                activeTimeframe="today"
-              />
+              <div key={food.id} className="h-full flex flex-col">
+                <FoodCard
+                  {...food}
+                  isTodaysSpecial={true}
+                  variant="customer"
+                  activeTimeframe="today"
+                />
+              </div>
             ))}
           </div>
         )}
@@ -260,10 +270,27 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
 
             {/* Scrollable Items Selection List */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col gap-2.5">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
-                  <Loader2 size={24} className="animate-spin text-[#f77512]" />
-                  <span className="text-xs font-bold">Loading available items...</span>
+              {isLoading || isModalRefreshing ? (
+                <div className="flex flex-col gap-2.5">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-3.5 rounded-2xl border border-gray-100 bg-gray-50/60 animate-pulse select-none"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-14 h-14 rounded-xl bg-gray-200 shrink-0" />
+                        <div className="flex flex-col gap-2 flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-28 h-4 bg-gray-200 rounded-md" />
+                            <div className="w-14 h-3.5 bg-gray-200 rounded-full" />
+                          </div>
+                          <div className="w-3/4 h-3 bg-gray-200/80 rounded-md" />
+                          <div className="w-16 h-3.5 bg-gray-200 rounded-md" />
+                        </div>
+                      </div>
+                      <div className="w-7 h-7 rounded-xl bg-gray-200 shrink-0 ml-3" />
+                    </div>
+                  ))}
                 </div>
               ) : filteredModalItems.length === 0 ? (
                 <div className="text-center py-10 text-gray-400">
@@ -273,67 +300,72 @@ export const TodaysSpecialsSection: React.FC<TodaysSpecialsSectionProps> = ({
                 </div>
               ) : (
                 filteredModalItems.map(item => {
-                  const isSelected = tempSelectedIds.includes(item.id);
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => handleToggleItem(item.id)}
-                      className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected
-                        ? 'bg-orange-50/80 border-[#f77512] shadow-sm'
-                        : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
-                        }`}
-                    >
-                      {/* Left: Thumbnail & Info */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-200"
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-sm text-slate-900 truncate">
-                              {item.title}
-                            </span>
-                            {item.category && (
-                              <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                                {item.category}
+                    const isSelected = tempSelectedIds.includes(item.id);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleToggleItem(item.id)}
+                        className={`relative flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected
+                          ? 'bg-orange-50/80 border-[#f77512] shadow-sm'
+                          : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/60'
+                          }`}
+                      >
+                        {/* Top-left corner card food type dot */}
+                        <div className="absolute top-2.5 left-2.5 z-10 scale-85 origin-top-left">
+                          <FoodTypeDot type={item.foodType} />
+                        </div>
+
+                        {/* Left: Thumbnail & Info */}
+                        <div className="flex items-center gap-3 min-w-0 pl-4">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-200"
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-black text-sm text-slate-900 truncate">
+                                {item.title}
                               </span>
-                            )}
-                          </div>
-                          <p className="text-gray-500 text-xs line-clamp-1 font-medium mt-0.5">
-                            {item.description}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs font-black text-[#f77512]">
-                              {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : item.price}
-                            </span>
-                            {item.hasDiscount && item.priceOriginal != null && (
-                              <span className="text-[11px] text-gray-400 line-through font-medium">
-                                ₹{item.priceOriginal}
+                              {item.category && (
+                                <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                  {item.category}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-500 text-xs line-clamp-1 font-medium mt-0.5">
+                              {item.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs font-black text-[#f77512]">
+                                {item.hasDiscount && item.priceFinal != null ? `₹${item.priceFinal}` : item.price}
                               </span>
-                            )}
-                            {item.resolvedOffer?.badge && (
-                              <span className="bg-[#f77512] text-white text-[9.5px] font-black px-1.5 py-0.5 rounded-md shadow-2xs uppercase">
-                                {item.resolvedOffer.badge}
-                              </span>
-                            )}
+                              {item.hasDiscount && item.priceOriginal != null && (
+                                <span className="text-[11px] text-gray-400 line-through font-medium">
+                                  ₹{item.priceOriginal}
+                                </span>
+                              )}
+                              {item.resolvedOffer?.badge && (
+                                <span className="bg-[#f77512] text-white text-[9.5px] font-black px-1.5 py-0.5 rounded-md shadow-2xs uppercase">
+                                  {item.resolvedOffer.badge}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Right: Custom Styled Checkbox */}
-                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-all ml-3 ${isSelected
-                        ? 'bg-[#f77512] text-white shadow-md scale-105'
-                        : 'bg-gray-100 border border-gray-300 text-transparent group-hover:border-gray-400'
-                        }`}>
-                        <Check size={16} className="stroke-[3]" />
+                        {/* Right: Custom Styled Checkbox */}
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-all ml-3 ${isSelected
+                          ? 'bg-[#f77512] text-white shadow-md scale-105'
+                          : 'bg-gray-100 border border-gray-300 text-transparent group-hover:border-gray-400'
+                          }`}>
+                          <Check size={16} className="stroke-[3]" />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
             </div>
 
             {/* Modal Footer Actions */}

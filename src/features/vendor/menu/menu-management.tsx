@@ -89,7 +89,7 @@ async function compressImageForUpload(file: File): Promise<File> {
 
 
 import MenuLoading from '@/app/vendor/menu/loading';
-import { FoodCard, type FoodCardItem } from '@/components/shared/item';
+import { FoodCard, FoodTypeDot, type FoodCardItem } from '@/components/shared/item';
 
 import { useVendor } from '@/context/vendor-context';
 import { getVendorShopAction } from '@/actions/shop/get-vendor-shop';
@@ -1219,9 +1219,9 @@ export default function MenuManagement() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
           {cardItems.map((item) => (
-            <div key={item.id}>
+            <div key={item.id} className="h-full flex flex-col">
               <FoodCard
                 {...item}
                 variant="vendor"
@@ -1627,17 +1627,15 @@ export default function MenuManagement() {
                     {(['veg', 'non-veg', 'egg'] as const).map((type) => {
                       const labels = { veg: 'Veg', 'non-veg': 'Non-Veg', egg: 'Egg' };
                       const styles = {
-                        veg: { active: 'bg-emerald-50 border-emerald-500 text-emerald-700', dot: 'border-emerald-600 bg-emerald-600' },
-                        'non-veg': { active: 'bg-rose-50 border-rose-500 text-rose-700', dot: 'border-rose-600 bg-rose-600' },
-                        egg: { active: 'bg-amber-50 border-amber-500 text-amber-700', dot: 'border-amber-500 bg-amber-500' },
+                        veg: { active: 'bg-emerald-50 border-emerald-500 text-emerald-700' },
+                        'non-veg': { active: 'bg-rose-50/80 border-[#8F291D] text-[#8F291D]' },
+                        egg: { active: 'bg-amber-50 border-amber-500 text-amber-700' },
                       };
                       const isActive = activeForm.foodType === type;
                       return (
                         <label key={type} className={`flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all cursor-pointer font-extrabold text-xs select-none ${isActive ? styles[type].active : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
                           <input type="radio" name="batchFoodType" value={type} checked={isActive} onChange={() => setActiveForm({ foodType: type })} className="hidden" />
-                          <span className={`w-4 h-4 rounded-sm border-2 ${styles[type].dot.split(' ')[0]} flex items-center justify-center p-0.5 bg-white shrink-0`}>
-                            {isActive && <span className={`w-2 h-2 rounded-full ${styles[type].dot.split(' ')[1]}`} />}
-                          </span>
+                          <FoodTypeDot type={type} />
                           {labels[type]}
                         </label>
                       );
@@ -1926,17 +1924,15 @@ export default function MenuManagement() {
                   {(['veg', 'non-veg', 'egg'] as const).map((type) => {
                     const labels = { veg: 'Veg', 'non-veg': 'Non-Veg', egg: 'Egg' };
                     const styles = {
-                      veg: { active: 'bg-emerald-50 border-emerald-500 text-emerald-700', dot: 'border-emerald-600 bg-emerald-600' },
-                      'non-veg': { active: 'bg-rose-50 border-rose-500 text-rose-700', dot: 'border-rose-600 bg-rose-600' },
-                      egg: { active: 'bg-amber-50 border-amber-500 text-amber-700', dot: 'border-amber-500 bg-amber-500' },
+                      veg: { active: 'bg-emerald-50 border-emerald-500 text-emerald-700' },
+                      'non-veg': { active: 'bg-rose-50/80 border-[#8F291D] text-[#8F291D]' },
+                      egg: { active: 'bg-amber-50 border-amber-500 text-amber-700' },
                     };
                     const isActive = formData.foodType === type;
                     return (
                       <label key={type} className={`flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all cursor-pointer font-extrabold text-xs select-none ${isActive ? styles[type].active : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
                         <input type="radio" name="foodType" value={type} checked={isActive} onChange={() => setFormData((prev) => ({ ...prev, foodType: type }))} className="hidden" />
-                        <span className={`w-4 h-4 rounded-sm border-2 ${styles[type].dot.split(' ')[0]} flex items-center justify-center p-0.5 bg-white shrink-0`}>
-                          {isActive && <span className={`w-2 h-2 rounded-full ${styles[type].dot.split(' ')[1]}`} />}
-                        </span>
+                        <FoodTypeDot type={type} />
                         {labels[type]}
                       </label>
                     );

@@ -66,17 +66,31 @@ function getCategoryEmoji(catName: string): string {
 
 // ─── Food Type Dot ────────────────────────────────────────────────────────────
 
-export const FoodTypeDot: React.FC<{ type?: 'veg' | 'non-veg' | 'egg' }> = ({ type = 'veg' }) => {
-  const map = {
-    'non-veg': { border: 'border-rose-500',    dot: 'bg-rose-500',    label: 'Non-Veg' },
-    'egg':     { border: 'border-amber-400',   dot: 'bg-amber-400',   label: 'Egg'     },
-    'veg':     { border: 'border-emerald-500', dot: 'bg-emerald-500', label: 'Veg'     },
-  };
-  const { border, dot, label } = map[type] ?? map['veg'];
+export const FoodTypeDot: React.FC<{ type?: 'veg' | 'non-veg' | 'egg'; showLabel?: boolean }> = ({ type = 'veg', showLabel = false }) => {
+  const isVeg = type === 'veg';
+  const isEgg = type === 'egg';
+  const borderColor = isVeg ? 'border-green-600' : isEgg ? 'border-amber-500' : 'border-[#8F291D]';
+  const dotColor = isVeg ? 'bg-green-600' : isEgg ? 'bg-amber-500' : 'bg-[#8F291D]';
+  const textColor = isVeg ? 'text-green-700' : isEgg ? 'text-amber-700' : 'text-[#8F291D]';
+  const labelText = isVeg ? 'Veg' : isEgg ? 'Egg' : 'Non-Veg';
+
   return (
-    <span className={`w-4 h-4 rounded-sm border-2 ${border} bg-white flex items-center justify-center shrink-0 shadow`} title={label}>
-      <span className={`w-2 h-2 rounded-full ${dot}`} />
-    </span>
+    <div className="flex items-center gap-1.5 shrink-0" title={labelText}>
+      <div className={`w-3.5 h-3.5 border ${borderColor} rounded-sm flex items-center justify-center bg-white shadow-xs shrink-0`}>
+        {isVeg ? (
+          <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+        ) : isEgg ? (
+          <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+        ) : (
+          <div className="w-0 h-0 border-l-[3.5px] border-l-transparent border-b-[5px] border-b-[#8F291D] border-r-[3.5px] border-r-transparent" />
+        )}
+      </div>
+      {showLabel && (
+        <span className={`text-[11px] font-bold ${textColor} capitalize`}>
+          {labelText}
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -123,7 +137,7 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
     <div
       onDoubleClick={handleDoubleClick}
       onTouchEnd={handleTouchEnd}
-      className={`bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col overflow-hidden group cursor-pointer hover:shadow-md transition-all duration-200 select-none ${
+      className={`bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col overflow-hidden group cursor-pointer hover:shadow-md transition-all duration-200 select-none h-full w-full ${
         props.variant === 'vendor' && !isAvailable ? 'opacity-60 grayscale-[30%]' : ''
       }`}
     >
@@ -214,70 +228,70 @@ export const FoodCard: React.FC<FoodCardProps> = (props) => {
 
       {/* ── Content Area ── */}
       <div className="flex flex-col flex-1 p-3.5 sm:p-4">
-        {/* Badge above title */}
-        {badgeText && (
-          <span className={`text-[10px] sm:text-xs font-black tracking-widest uppercase mb-1 ${badgeColorClass}`}>
-            {badgeText}
-          </span>
-        )}
-
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <h4 className="font-black text-sm sm:text-base text-gray-900 leading-snug line-clamp-1 flex-1">{title}</h4>
-          {props.variant === 'vendor' && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); props.onToggleAvailability?.(id); }}
-              className={`shrink-0 text-xs font-black px-2.5 py-1 rounded-xl shadow-xs transition-all whitespace-nowrap cursor-pointer ${
-                isAvailable
-                  ? 'bg-emerald-500 text-white hover:bg-rose-600'
-                  : 'bg-rose-500 text-white hover:bg-emerald-600'
-              }`}
-            >
-              {isAvailable ? 'Mark Sold Out' : 'Mark Available'}
-            </button>
-          )}
-        </div>
-
-        {description ? (
-          <p className="text-xs sm:text-sm text-gray-500 font-medium line-clamp-2 mb-2 leading-relaxed">
-            {description}
-          </p>
-        ) : null}
-
-        {/* Category tag (vendor only) */}
-        {category && props.variant === 'vendor' && (
-          <span className="self-start text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md mb-2 border border-gray-200">
+        {/* 1. Category Tag */}
+        {category && (
+          <span className="self-start text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md mb-1 border border-gray-200/80 truncate max-w-full">
             {category}
           </span>
         )}
 
-        {/* Price row */}
-        <div className="flex items-center justify-between mt-auto pt-1 gap-2">
-          <div className="flex flex-col">
-            {/* Discounted price display for customer view */}
-            {props.variant === 'customer' && hasDiscount && priceOriginal != null && priceFinal != null ? (
-              <>
-                <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
-                  ₹{priceFinal}
+        {/* 2. Bestseller / Special / Offer Tag */}
+        <div className="min-h-[16px] flex items-center mb-1">
+          {badgeText ? (
+            <span className={`text-[10px] sm:text-xs font-black tracking-widest uppercase ${badgeColorClass}`}>
+              {badgeText}
+            </span>
+          ) : null}
+        </div>
+
+        {/* 3. Name */}
+        <h4 className="font-black text-sm sm:text-base text-gray-900 leading-snug line-clamp-1 mb-1.5">{title}</h4>
+
+        {/* 4. Price with Offer Details */}
+        <div className="flex items-baseline gap-2 mb-2">
+          {hasDiscount && priceOriginal != null && priceFinal != null ? (
+            <>
+              <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                ₹{priceFinal}
+              </span>
+              <span className="text-xs text-gray-400 line-through font-medium">
+                ₹{priceOriginal}
+              </span>
+              {resolvedOffer?.badge && (
+                <span className="text-[#f77512] text-[10px] font-black uppercase tracking-wider">
+                  ({resolvedOffer.badge})
                 </span>
-                <span className="text-xs text-gray-400 line-through">
-                  ₹{priceOriginal}
-                </span>
-              </>
-            ) : (
-              <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">{price}</span>
-            )}
-          </div>
-          {props.variant === 'customer' && hasStats && (
+              )}
+            </>
+          ) : (
+            <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">{price}</span>
+          )}
+        </div>
+
+        {/* 5. Sold Out / Available Button (Bottom) */}
+        <div className="mt-auto pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+          {props.variant === 'vendor' ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); props.onToggleAvailability?.(id); }}
+              className={`w-full text-center text-[11px] sm:text-xs font-black py-2 rounded-xl shadow-xs transition-all whitespace-nowrap cursor-pointer active:scale-95 ${
+                isAvailable
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  : 'bg-rose-500 hover:bg-rose-600 text-white'
+              }`}
+            >
+              {isAvailable ? 'Mark Sold Out' : 'Mark Available'}
+            </button>
+          ) : props.variant === 'customer' && hasStats ? (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setLiked(v => !v); }}
-              className="flex items-center gap-1 text-xs font-extrabold text-gray-500 hover:text-red-500 transition-colors"
+              className="flex items-center gap-1 text-xs font-extrabold text-gray-500 hover:text-red-500 transition-colors ml-auto"
             >
               <Heart size={13} className={liked ? 'text-red-500 fill-red-500' : ''} />
               <span>{formatNumber(liked ? currentStats.likes + 1 : currentStats.likes)}</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -340,9 +354,11 @@ export const Item: React.FC<ItemProps> = ({ items = [] }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full items-stretch">
         {popularItems.map(food => (
-          <FoodCard key={food.id} {...food} variant="customer" activeTimeframe={activeTab} />
+          <div key={food.id} className="h-full flex flex-col">
+            <FoodCard {...food} variant="customer" activeTimeframe={activeTab} />
+          </div>
         ))}
       </div>
     </div>
