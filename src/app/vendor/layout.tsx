@@ -25,6 +25,7 @@ import {
   MapPin,
   ExternalLink,
   X,
+  Flame,
   LucideIcon
 } from 'lucide-react';
 
@@ -44,6 +45,7 @@ export interface SubNavItem {
 
 export const CATEGORIES: CategoryItem[] = [
   { id: 'home', label: 'Home', icon: Home },
+  { id: 'live-orders', label: 'Live Orders', icon: Flame },
   { id: 'menu', label: 'Menu', icon: List },
   { id: 'promotions', label: 'Promotions', icon: Tag },
   { id: 'qr-menu', label: 'QR Menu', icon: QrCode },
@@ -235,7 +237,8 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({ activeTab }) => {
 
             // Map category id to destination path
             let path = '/vendor/dashboard';
-            if (cat.id === 'menu') path = '/vendor/menu';
+            if (cat.id === 'live-orders') path = '/vendor/live-orders';
+            else if (cat.id === 'menu') path = '/vendor/menu';
             else if (cat.id === 'promotions') path = '/vendor/promotions';
             else if (cat.id === 'qr-menu') path = '/vendor/qr';
 
@@ -441,13 +444,16 @@ export const MobileVendorHeader: React.FC<{ activeTab: string }> = ({ activeTab 
           </Link>
         </div>
 
-        {/* Third Row: Navigation Category Tabs (4 tabs in 1 line with comfortable height) */}
-        <div className="grid grid-cols-4 gap-2 pt-3 pb-1 w-full relative z-10">
+        {/* Third Row: Navigation Category Tabs (Icon-only for home, promotions & qr-menu on mobile) */}
+        <div className="flex items-center gap-1.5 pt-3 pb-1 w-full relative z-10 overflow-x-auto no-scrollbar">
           {CATEGORIES.map((cat) => {
             const isActive = activeTab === cat.id;
+            const Icon = cat.icon;
+            const isIconOnly = cat.id === 'home' || cat.id === 'promotions' || cat.id === 'qr-menu';
 
             let path = '/vendor/dashboard';
-            if (cat.id === 'menu') path = '/vendor/menu';
+            if (cat.id === 'live-orders') path = '/vendor/live-orders';
+            else if (cat.id === 'menu') path = '/vendor/menu';
             else if (cat.id === 'promotions') path = '/vendor/promotions';
             else if (cat.id === 'qr-menu') path = '/vendor/qr';
 
@@ -456,13 +462,20 @@ export const MobileVendorHeader: React.FC<{ activeTab: string }> = ({ activeTab 
                 key={cat.id}
                 href={path}
                 prefetch={false}
-                className={`flex items-center justify-center px-1.5 py-2 rounded-xl text-[12.5px] font-bold transition-all text-center w-full min-w-0 ${
+                title={cat.label}
+                className={`flex items-center justify-center py-2 transition-all text-center rounded-xl text-[12px] font-bold ${
+                  isIconOnly ? 'px-2.5 shrink-0' : 'px-3 flex-1 min-w-0'
+                } ${
                   isActive
                     ? 'bg-[#f77512] text-white shadow-xs font-bold'
                     : 'bg-white text-slate-700 border border-gray-200/90 hover:bg-slate-100'
                 }`}
               >
-                <span className="truncate max-w-full leading-tight">{cat.label}</span>
+                {isIconOnly ? (
+                  <Icon className={`w-4.5 h-4.5 shrink-0 ${isActive ? 'text-white' : 'text-[#f77512]'}`} strokeWidth={2.2} />
+                ) : (
+                  <span className="truncate max-w-full leading-tight">{cat.label}</span>
+                )}
               </Link>
             );
           })}
@@ -559,6 +572,7 @@ export default function Layout({ children }: LayoutProps) {
 
   // Helper to resolve active tab directly from URL path (strictly synchronized with router)
   const getTabFromPathname = (path: string) => {
+    if (path.startsWith('/vendor/live-orders')) return 'live-orders';
     if (path.startsWith('/vendor/menu')) return 'menu';
     if (path.startsWith('/vendor/promotions')) return 'promotions';
     if (path.startsWith('/vendor/qr')) return 'qr-menu';

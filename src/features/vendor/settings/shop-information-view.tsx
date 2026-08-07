@@ -111,19 +111,16 @@ export const ShopInformationView: React.FC = () => {
     <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-8 custom-scrollbar relative bg-white">
       <div className="max-w-2xl mx-auto space-y-4 sm:space-y-7">
 
-        {/* Images Section */}
+        {/* ── Hidden for now: Shop Assets ──
         <div className="space-y-3 sm:space-y-4">
           <h3 className="text-sm sm:text-[16px] font-bold text-[#1a1a1a]">Shop Assets</h3>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-center sm:items-end">
-            {/* Logo Upload */}
             <div className="flex flex-col items-center gap-1.5 shrink-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-[#fdf8f3] cursor-pointer hover:bg-[#f8f0e5] transition-colors relative overflow-hidden group">
                 <Camera size={20} className="text-gray-400 group-hover:text-[#f67412] transition-colors sm:w-6 sm:h-6" />
                 <span className="text-[10px] text-gray-500 mt-0.5 font-medium group-hover:text-[#f67412]">Logo</span>
               </div>
             </div>
-
-            {/* Cover Upload */}
             <div className="w-full sm:flex-1">
               <div className="h-24 sm:h-32 w-full rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-[#fdf8f3] cursor-pointer hover:bg-[#f8f0e5] transition-colors group">
                 <ImagePlus size={24} className="text-gray-400 group-hover:text-[#f67412] transition-colors sm:w-7 sm:h-7" />
@@ -134,8 +131,8 @@ export const ShopInformationView: React.FC = () => {
             </div>
           </div>
         </div>
-
         <hr className="border-gray-100" />
+        ── */}
 
         {/* Form Fields Section */}
         <div className="space-y-3.5 sm:space-y-5">
@@ -163,6 +160,7 @@ export const ShopInformationView: React.FC = () => {
             />
           </div>
 
+          {/* ── Hidden for now: Food Type ──
           <div className="flex flex-col gap-1 sm:gap-1.5">
             <label className="text-xs sm:text-[13px] font-semibold text-gray-700">Food Type</label>
             <select
@@ -178,6 +176,7 @@ export const ShopInformationView: React.FC = () => {
               <option value="beverages">Beverages</option>
             </select>
           </div>
+          ── */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="flex flex-col gap-1 sm:gap-1.5">

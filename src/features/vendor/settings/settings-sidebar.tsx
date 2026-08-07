@@ -23,7 +23,7 @@ interface SidebarProps {
 
 const NAV_ITEMS: { id: SettingsTab; label: string; icon: React.FC<{ size?: number; className?: string }> }[] = [
   { id: 'shop-info',       label: 'Shop Information',   icon: Store },
-  { id: 'business-hours',  label: 'Business Hours',     icon: Clock },
+  // { id: 'business-hours',  label: 'Business Hours',     icon: Clock },
   { id: 'account',         label: 'Account',            icon: User },
   { id: 'support',         label: 'Customer Support',   icon: MessageSquare },
 ];
