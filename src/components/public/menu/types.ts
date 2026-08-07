@@ -51,7 +51,9 @@ export interface CartSummary {
 }
 
 export interface ActiveOrder {
+  orderId?: string;
   tokenNumber: string;
+  status?: string;
   itemsCount: number;
   totalPrice: number;
   totalSavings: number;

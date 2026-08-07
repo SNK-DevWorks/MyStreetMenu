@@ -10,4 +10,7 @@ export * from './schema/daily-unique-visitors';
 export * from './schema/subscriptions';
 export * from './schema/item-likes';
 export * from './schema/item-like-counts';
+export * from './schema/orders';
+export * from './schema/order-items';
+export * from './schema/shop-token-counters';
 export * from './relations';

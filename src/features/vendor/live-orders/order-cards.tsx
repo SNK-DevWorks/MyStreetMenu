@@ -44,27 +44,27 @@ function elapsedUrgency(mins: number) {
   if (mins < 5) {
     return {
       bar: 'bg-green-500',
-      badgeBg: 'bg-green-50 text-green-700 border-green-100',
+      badgeBg: 'bg-white text-green-600 border-green-500/70',
       statusText: 'WAITING',
     };
   }
   if (mins < 10) {
     return {
       bar: 'bg-yellow-500',
-      badgeBg: 'bg-yellow-50 text-yellow-700 border-yellow-100',
+      badgeBg: 'bg-white text-yellow-600 border-yellow-500/70',
       statusText: 'WAITING',
     };
   }
   if (mins < 15) {
     return {
       bar: 'bg-orange-500',
-      badgeBg: 'bg-orange-50 text-orange-700 border-orange-100',
+      badgeBg: 'bg-white text-orange-600 border-orange-500/70',
       statusText: 'WAITING',
     };
   }
   return {
     bar: 'bg-red-500',
-    badgeBg: 'bg-red-50 text-red-500 border-red-100',
+    badgeBg: 'bg-white text-red-500 border-red-500/70',
     statusText: 'WAITING',
   };
 }
@@ -120,7 +120,7 @@ export const NewOrderCard: React.FC<NewOrderCardProps> = ({ order, onMarkReady }
             </div>
 
             {/* Table / Order Type */}
-            <div className="bg-purple-50 text-purple-700 border border-purple-100 rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 flex flex-col items-center justify-center min-w-[65px] sm:min-w-[85px]">
+            <div className="bg-white text-purple-700 border border-purple-400/80 rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 flex flex-col items-center justify-center min-w-[65px] sm:min-w-[85px]">
               <span className="text-lg sm:text-2xl font-black leading-none">T{order.tableNo}</span>
               <span className="text-purple-600 text-[8.5px] sm:text-[10px] font-semibold mt-0.5 sm:mt-1">Table {order.tableNo}</span>
             </div>
@@ -129,11 +129,14 @@ export const NewOrderCard: React.FC<NewOrderCardProps> = ({ order, onMarkReady }
           {/* Divider */}
           <div className="border-t border-dashed border-gray-200 mb-2.5 sm:mb-3" />
 
-          {/* Time Row */}
+          {/* Time & Total Qty Row */}
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <div className="flex items-center text-gray-500 text-xs font-semibold" suppressHydrationWarning>
               <Clock className="w-3.5 h-3.5 mr-1 text-gray-400" />
               <span suppressHydrationWarning>{formatTime(order.placedAt)}</span>
+            </div>
+            <div className="flex items-center bg-white text-black border border-black font-extrabold text-[11px] sm:text-xs px-2.5 py-0.5 rounded-lg">
+              <span>Qty: {order.items.reduce((sum, item) => sum + item.qty, 0)}</span>
             </div>
           </div>
 
@@ -210,7 +213,7 @@ interface ReadyOrderCardProps {
 
 export const ReadyOrderCard: React.FC<ReadyOrderCardProps> = ({ order, onComplete, onCollected }) => {
   const [completing, setCompleting] = useState(false);
-  const waitMins = order.readyAt
+  const readyMinsAgo = order.readyAt
     ? Math.floor((Date.now() - order.readyAt.getTime()) / 60000)
     : 0;
 
@@ -225,12 +228,11 @@ export const ReadyOrderCard: React.FC<ReadyOrderCardProps> = ({ order, onComplet
         <div>
           {/* Header */}
           <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="bg-green-50 text-green-700 border border-green-100 rounded-xl px-2.5 py-1 flex flex-col items-center justify-center min-w-[60px] sm:min-w-[65px]">
-              <div className="flex items-baseline font-black text-lg sm:text-xl leading-none">
-                <span>{waitMins}</span>
-                <span className="ml-0.5 text-[10px] font-semibold">min</span>
-              </div>
-              <span className="text-[8.5px] font-bold uppercase tracking-wider mt-0.5 sm:mt-1">WAITING</span>
+            <div className="bg-white text-green-600 border border-green-500/70 rounded-xl px-2 py-1 flex flex-col items-center justify-center min-w-[65px] sm:min-w-[72px]">
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider leading-none">READY</span>
+              <span className="text-[8.5px] sm:text-[9.5px] font-bold text-green-700 mt-1 leading-none whitespace-nowrap">
+                {readyMinsAgo === 0 ? 'just now' : `${readyMinsAgo} min ago`}
+              </span>
             </div>
 
             <div className="flex flex-col items-center">
@@ -238,7 +240,7 @@ export const ReadyOrderCard: React.FC<ReadyOrderCardProps> = ({ order, onComplet
               <span className="text-[22px] sm:text-[26px] leading-none font-black text-[#1B2533]">{order.token}</span>
             </div>
 
-            <div className="bg-purple-50 text-purple-700 border border-purple-100 rounded-xl px-2.5 py-1 flex flex-col items-center justify-center min-w-[60px] sm:min-w-[65px]">
+            <div className="bg-white text-purple-700 border border-purple-400/80 rounded-xl px-2.5 py-1 flex flex-col items-center justify-center min-w-[60px] sm:min-w-[65px]">
               <span className="text-lg sm:text-xl font-black leading-none">T{order.tableNo}</span>
               <span className="text-purple-600 text-[8.5px] font-semibold mt-0.5 sm:mt-1">Table {order.tableNo}</span>
             </div>
@@ -247,11 +249,14 @@ export const ReadyOrderCard: React.FC<ReadyOrderCardProps> = ({ order, onComplet
           {/* Divider */}
           <div className="border-t border-dashed border-gray-200 mb-2.5" />
 
-          {/* Time Row */}
+          {/* Time & Total Qty Row */}
           <div className="flex items-center justify-between mb-3 text-xs">
             <div className="flex items-center text-gray-500 text-[11px] font-medium" suppressHydrationWarning>
               <Clock className="w-3 h-3 mr-1 text-gray-400" />
               <span suppressHydrationWarning>{formatTime(order.placedAt)}</span>
+            </div>
+            <div className="flex items-center bg-white text-black border border-black font-extrabold text-[10.5px] px-2 py-0.5 rounded-lg">
+              <span>Qty: {order.items.reduce((sum, item) => sum + item.qty, 0)}</span>
             </div>
           </div>
 

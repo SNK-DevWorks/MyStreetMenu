@@ -1,59 +1,81 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   NewOrderCard,
   ReadyOrderCard,
   EmptyState,
   type Order,
-  type OrderStatus,
 } from '@/features/vendor/live-orders/order-cards';
-import { makeSeedOrders } from '@/features/vendor/live-orders/seed-data';
+import { useLiveOrders } from '@/features/vendor/live-orders/use-live-orders';
+import type { LiveOrder } from '@/types/order';
+import { ORDER_STATUS } from '@/lib/orders/order-status';
+
+/** Bridge from LiveOrder (DB shape) → Order (card display shape) */
+function toCardOrder(o: LiveOrder): Order {
+  return {
+    id:       o.id,
+    token:    o.token,
+    tableNo:  o.tableLabel ?? '—',
+    placedAt: new Date(o.placedAt),
+    total:    o.total,
+    status:   (o.status === 'new' || o.status === 'preparing') ? 'new' : 'ready',
+    readyAt:  o.readyAt ? new Date(o.readyAt) : undefined,
+    notes:    o.customerNotes ?? undefined,
+    collected: false,
+    items: o.items.map((item) => ({
+      name: item.name,
+      qty:  item.quantity,
+      image: item.image ?? undefined,
+    })),
+  };
+}
 
 export default function LiveOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<'new' | 'ready'>('new');
-  const [, tick] = useState(0);
+  // Track collected state locally (UI-only, not persisted to DB yet)
+  const [collectedIds, setCollectedIds] = useState<Set<string>>(new Set());
 
-  // Initialize seed orders on mount to avoid SSR time mismatch
-  useEffect(() => {
-    setOrders(makeSeedOrders());
-  }, []);
-
-  // Refresh elapsed timers every 30 s
-  useEffect(() => {
-    const iv = setInterval(() => tick((n) => n + 1), 30000);
-    return () => clearInterval(iv);
-  }, []);
+  const { newOrders, preparingOrders, readyOrders, loading, changeStatus } = useLiveOrders();
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const handleMarkReady = useCallback((id: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id ? { ...o, status: 'ready' as OrderStatus, readyAt: new Date() } : o
-      )
-    );
-    showToast('Order marked as ready!');
-  }, [showToast]);
+  // Merge new + preparing into a single "NEW" column for the current card UI
+  const pendingLiveOrders = [...newOrders, ...preparingOrders];
 
-  const handleComplete = useCallback((id: string) => {
-    setOrders((prev) => prev.filter((o) => o.id !== id));
+  // Convert to card shape and merge collected flag
+  const newCardOrders  = pendingLiveOrders.map((o) => ({ ...toCardOrder(o), collected: collectedIds.has(o.id) }));
+  const readyCardOrders = readyOrders.map((o) => ({ ...toCardOrder(o), collected: collectedIds.has(o.id) }));
+
+  const handleMarkReady = useCallback(async (id: string) => {
+    await changeStatus(id, ORDER_STATUS.READY);
+    showToast('Order marked as ready!');
+  }, [changeStatus, showToast]);
+
+  const handleComplete = useCallback(async (id: string) => {
+    await changeStatus(id, ORDER_STATUS.COMPLETED);
     showToast('Order completed.');
-  }, [showToast]);
+  }, [changeStatus, showToast]);
 
   const handleCollected = useCallback((id: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, collected: !o.collected } : o))
-    );
+    setCollectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   }, []);
 
-  const newOrders   = orders.filter((o) => o.status === 'new');
-  const readyOrders = orders.filter((o) => o.status === 'ready');
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#f77512] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1536px] mx-auto px-3 sm:px-4 md:px-8 pt-0 pb-12">
@@ -81,7 +103,7 @@ export default function LiveOrdersPage() {
             <span className={`w-5 h-5 rounded-full text-[10.5px] font-black flex items-center justify-center ${
               mobileTab === 'new' ? 'bg-[#f77512] text-white' : 'bg-gray-200 text-gray-700'
             }`}>
-              {newOrders.length}
+              {newCardOrders.length}
             </span>
           </button>
 
@@ -98,29 +120,29 @@ export default function LiveOrdersPage() {
             <span className={`w-5 h-5 rounded-full text-[10.5px] font-black flex items-center justify-center ${
               mobileTab === 'ready' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'
             }`}>
-              {readyOrders.length}
+              {readyCardOrders.length}
             </span>
           </button>
         </div>
       </div>
 
-      {/* ── MOBILE CONTENT: Displays Active Tab (NEW or READY) ── */}
+      {/* ── MOBILE CONTENT ── */}
       <div className="block md:hidden">
         {mobileTab === 'new' ? (
-          newOrders.length === 0 ? (
+          newCardOrders.length === 0 ? (
             <EmptyState tab="new" />
           ) : (
             <div className="flex flex-col gap-4">
-              {newOrders.map((order) => (
+              {newCardOrders.map((order) => (
                 <NewOrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
               ))}
             </div>
           )
-        ) : readyOrders.length === 0 ? (
+        ) : readyCardOrders.length === 0 ? (
           <EmptyState tab="ready" />
         ) : (
           <div className="flex flex-col gap-4">
-            {readyOrders.map((order) => (
+            {readyCardOrders.map((order) => (
               <ReadyOrderCard
                 key={order.id}
                 order={order}
@@ -140,15 +162,15 @@ export default function LiveOrdersPage() {
           <div className="sticky top-[138px] z-30 -mx-1 pr-7 lg:pr-9 bg-[#fdf8f3] py-3.5 flex items-center gap-2 shadow-[0_2px_0_0_rgba(0,0,0,0.06)]">
             <h3 className="text-[16px] font-black text-[#1f114a] tracking-tight">NEW</h3>
             <span className="w-6 h-6 rounded-full bg-[#f77512] text-white text-[11px] font-black flex items-center justify-center shrink-0">
-              {newOrders.length}
+              {newCardOrders.length}
             </span>
           </div>
 
-          {newOrders.length === 0 ? (
+          {newCardOrders.length === 0 ? (
             <EmptyState tab="new" />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {newOrders.map((order) => (
+              {newCardOrders.map((order) => (
                 <NewOrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
               ))}
             </div>
@@ -160,15 +182,15 @@ export default function LiveOrdersPage() {
           <div className="sticky top-[138px] z-30 -mx-1 px-1 bg-[#fdf8f3] py-3.5 flex items-center gap-2 shadow-[0_2px_0_0_rgba(0,0,0,0.06)]">
             <h3 className="text-[16px] font-black text-[#1f114a] tracking-tight">READY</h3>
             <span className="w-6 h-6 rounded-full bg-green-500 text-white text-[11px] font-black flex items-center justify-center shrink-0">
-              {readyOrders.length}
+              {readyCardOrders.length}
             </span>
           </div>
 
-          {readyOrders.length === 0 ? (
+          {readyCardOrders.length === 0 ? (
             <EmptyState tab="ready" />
           ) : (
             <div className="flex flex-col gap-3 w-full">
-              {readyOrders.map((order) => (
+              {readyCardOrders.map((order) => (
                 <ReadyOrderCard
                   key={order.id}
                   order={order}

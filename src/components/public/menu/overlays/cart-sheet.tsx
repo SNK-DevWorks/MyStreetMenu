@@ -6,6 +6,7 @@ import type { FoodCardItem } from '@/components/shared/item';
 import type { CartSummary, ActiveOrder } from '../types';
 import { QuantityStepper } from '../ui/quantity-stepper';
 import { getCategoryEmoji, getItemUnitPrice, formatSavings } from '../utils';
+import { placeOrderAction } from '@/actions/order/place-order';
 
 interface CartItem {
   item: FoodCardItem;
@@ -19,6 +20,7 @@ interface CartSheetProps {
   vendorAddress: string;
   whatsapp?: string | null;
   phone?: string | null;
+  shopId?: string;
   onClose: () => void;
   onIncrement: (itemId: string) => void;
   onDecrement: (itemId: string) => void;
@@ -48,6 +50,7 @@ export function CartSheet({
   vendorAddress,
   whatsapp,
   phone,
+  shopId,
   onClose,
   onIncrement,
   onDecrement,
@@ -60,53 +63,109 @@ export function CartSheet({
 }: CartSheetProps) {
   const [step, setStep] = useState<Step>('cart');
   const [orderStatus, setOrderStatus] = useState<OrderStatus>(initialOrderStatus);
-  const [tokenNumber] = useState(() => activeOrder?.tokenNumber || ('A' + Math.floor(20 + Math.random() * 70)));
+  // tokenNumber is now generated server-side and returned from placeOrderAction
 
   // Form Fields
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [tableNumber, setTableNumber] = useState('');
+  const [tableNumber, setTableNumber] = useState('');      // display label (for walk-in typed input)
+  const [tableUuid, setTableUuid] = useState<string | null>(null); // from ?t= QR param
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [nameError, setNameError] = useState(false);
 
-  // Auto-fill table number from URL if available
+  // Read table from URL on mount.
+  // ?t=<uuid>  — QR-generated, validated server-side (no DB call here)
+  // ?table=X   — legacy / plain label fallback
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const urlTable = params.get('table');
-      if (urlTable) {
-        setTableNumber(urlTable);
+      const uuid = params.get('t');
+      const legacyLabel = params.get('table') || params.get('tableNo') || params.get('tableno') || params.get('table_no');
+      if (uuid && uuid.length === 36) {
+        // UUID from a proper QR code — validated by server when order is placed
+        setTableUuid(uuid);
+      } else if (legacyLabel) {
+        // Plain label from old-style URLs or manual sharing
+        setTableNumber(legacyLabel.trim());
       }
     }
   }, []);
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!customerName.trim()) {
       setNameError(true);
       return;
     }
     setNameError(false);
-
-    const placedOrder: ActiveOrder = {
-      tokenNumber,
-      itemsCount: cartSummary.totalItemsCount,
-      totalPrice: cartSummary.totalPrice,
-      totalSavings: cartSummary.totalSavings,
-      lastAddedItem: cartSummary.lastAddedItem,
-      items: cartItems,
-      customerName: customerName.trim() || undefined,
-      tableNumber: tableNumber.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-      specialInstructions: specialInstructions.trim() || undefined,
-    };
-
     setOrderStatus('placing');
-    setTimeout(() => {
-      setOrderStatus('success');
-      if (onOrderPlaced) {
-        onOrderPlaced(placedOrder);
+
+    // Detect orderSource from URL
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const isQR = params?.has('qr');
+    const orderSource = isQR ? 'qr' : 'direct_link';
+
+    // If shopId is available, hit the real DB — otherwise fall back to mock
+    if (shopId) {
+      const result = await placeOrderAction({
+        shopId,
+        orderSource,
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        // Pass UUID (from QR) OR plain label (walk-in) — server validates UUID
+        tableUuid: tableUuid ?? undefined,
+        tableLabel: !tableUuid && tableNumber.trim() ? tableNumber.trim() : undefined,
+        customerNotes: specialInstructions.trim() || undefined,
+        paymentMethod: 'counter_cash',
+        items: cartItems.map(({ item, quantity }) => ({
+          menuItemId: item.id,
+          name: item.title,
+          image: item.image ?? null,
+          price: getItemUnitPrice(item),
+          quantity,
+        })),
+      });
+
+      if (!result.success || !result.data) {
+        setOrderStatus('idle');
+        console.error('Order placement failed:', result.error);
+        return;
       }
-    }, 300);
+
+      const placedOrder: ActiveOrder = {
+        orderId: result.data.orderId,
+        tokenNumber: result.data.token,
+        status: 'new',
+        itemsCount: cartSummary.totalItemsCount,
+        totalPrice: result.data.total,
+        totalSavings: cartSummary.totalSavings,
+        lastAddedItem: cartSummary.lastAddedItem,
+        items: cartItems,
+        customerName: customerName.trim() || undefined,
+        tableNumber: tableNumber.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        specialInstructions: specialInstructions.trim() || undefined,
+      };
+
+      setOrderStatus('success');
+      onOrderPlaced?.(placedOrder);
+    } else {
+      // No shopId — dev/preview fallback with fake token
+      const fallbackToken = 'A' + Math.floor(20 + Math.random() * 70);
+      const placedOrder: ActiveOrder = {
+        tokenNumber: fallbackToken,
+        itemsCount: cartSummary.totalItemsCount,
+        totalPrice: cartSummary.totalPrice,
+        totalSavings: cartSummary.totalSavings,
+        lastAddedItem: cartSummary.lastAddedItem,
+        items: cartItems,
+        customerName: customerName.trim() || undefined,
+        tableNumber: tableNumber.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        specialInstructions: specialInstructions.trim() || undefined,
+      };
+      setOrderStatus('success');
+      onOrderPlaced?.(placedOrder);
+    }
   };
 
   const handlePillClick = (pill: string) => {
@@ -122,7 +181,7 @@ export function CartSheet({
     const allOrders = ordersList.length > 0
       ? ordersList
       : (activeOrder ? [activeOrder] : [{
-          tokenNumber,
+          tokenNumber: '—',
           itemsCount: cartSummary.totalItemsCount,
           totalPrice: cartSummary.totalPrice,
           totalSavings: cartSummary.totalSavings,

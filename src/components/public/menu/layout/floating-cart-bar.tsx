@@ -92,7 +92,20 @@ export function FloatingCartBar({
     const totalItemsCount = activeOrders.reduce((sum, o) => sum + o.itemsCount, 0);
     const combinedTotalPrice = activeOrders.reduce((sum, o) => sum + o.totalPrice, 0);
 
-    const bannerText = activeOrders.length > 1
+    const isReady = latestOrder.status === 'ready';
+    const isPreparing = latestOrder.status === 'preparing';
+
+    const bannerBg = isReady
+      ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
+      : isPreparing
+      ? 'bg-amber-50 text-amber-800 border-amber-200'
+      : 'bg-emerald-50/95 text-emerald-800 border-emerald-100';
+
+    const bannerText = isReady
+      ? `🎉 Your order is ready! Token #${latestOrder.tokenNumber}`
+      : isPreparing
+      ? `👨‍🍳 Preparing your order • Token #${latestOrder.tokenNumber}`
+      : activeOrders.length > 1
       ? `${activeOrders.length} Orders Placed • Latest: Token #${latestOrder.tokenNumber}`
       : `Order Placed • Token #${latestOrder.tokenNumber}`;
 
@@ -100,11 +113,11 @@ export function FloatingCartBar({
       <div className="fixed bottom-4 left-4 right-4 z-40 max-w-lg mx-auto animate-in slide-in-from-bottom duration-300">
         <div className="bg-white rounded-2xl shadow-2xl border border-orange-100/90 overflow-hidden">
           {/* Order Status Top Banner */}
-          <div className="bg-emerald-50/95 border-b border-emerald-100 px-4 py-2 flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-[#00B56A] text-white flex items-center justify-center shrink-0">
+          <div className={`border-b px-4 py-2 flex items-center gap-2 ${bannerBg}`}>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isReady ? 'bg-white text-emerald-600' : 'bg-[#00B56A] text-white'}`}>
               <Check size={12} strokeWidth={3} />
             </div>
-            <p className="text-xs sm:text-[13px] font-bold text-emerald-800 truncate">
+            <p className={`text-xs sm:text-[13px] font-bold truncate ${isReady ? 'text-white' : ''}`}>
               {bannerText}
             </p>
           </div>

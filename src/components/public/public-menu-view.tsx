@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { FoodTypeIcon } from './menu/ui/food-type-icon';
 import { useCart } from './menu/hooks/use-cart';
@@ -19,6 +19,8 @@ import { ItemDetailSheet } from './menu/overlays/item-detail-sheet';
 import { AllSpecialsOverlay } from './menu/overlays/all-specials-overlay';
 import { CartSheet } from './menu/overlays/cart-sheet';
 import { useAnalytics } from '@/providers/analytics-provider';
+import { subscribeToOrder } from '@/lib/orders/realtime';
+import { getCustomerOrderStatusesAction } from '@/actions/order/get-order-status';
 import type { AnnouncementItem, PublicOfferItem, PublicMenuViewProps, ActiveOrder } from './menu/types';
 import type { FoodCardItem } from '@/components/shared/item';
 
@@ -31,11 +33,12 @@ export default function PublicMenuView({
   phone = null,
   whatsapp = null,
   mapUrl = null,
+  shopId,
   items = [],
   categories = ['All Items'],
   offers = [],
   announcements = [],
-}: PublicMenuViewProps) {
+}: PublicMenuViewProps & { shopId?: string }) {
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { track } = useAnalytics();
   const search = useSearch();
@@ -50,6 +53,142 @@ export default function PublicMenuView({
   const [showCart, setShowCart] = useState(false);
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
   const [ordersList, setOrdersList] = useState<ActiveOrder[]>([]);
+
+  const storageKey = `msm_active_orders_${shopId || 'default'}`;
+
+  // ── Celebratory "Your Order is Ready!" Chime Sound + Vibration + Tab Alert ─
+  const triggerReadyAlert = useCallback((token?: string) => {
+    // 1. Celebratory Chime Sound
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      notes.forEach((freq, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + index * 0.12);
+        gain.gain.setValueAtTime(0, ctx.currentTime + index * 0.12);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + index * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + index * 0.12 + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + index * 0.12);
+        osc.stop(ctx.currentTime + index * 0.12 + 0.5);
+      });
+    } catch {
+      // Audio autoplay restrictions
+    }
+
+    // 2. Strong Multi-Pulse Vibration Pattern (3 distinctive buzzes)
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate([300, 100, 300, 100, 500]);
+      } catch {}
+    }
+
+    // 3. Flash Browser Tab Title
+    if (typeof document !== 'undefined') {
+      const originalTitle = document.title;
+      let count = 0;
+      const iv = setInterval(() => {
+        document.title = count % 2 === 0 ? `🔔 🎉 Order Ready! ${token ? `#${token}` : ''}` : originalTitle;
+        if (++count >= 12) {
+          clearInterval(iv);
+          document.title = originalTitle;
+        }
+      }, 600);
+    }
+  }, []);
+
+  // ── Helper to verify and sync live order statuses from DB ───────────────────
+  const verifyOrderStatuses = useCallback(async (currentOrders: ActiveOrder[]) => {
+    const orderIds = currentOrders.map((o) => o.orderId).filter(Boolean) as string[];
+    if (orderIds.length === 0) return;
+
+    const res = await getCustomerOrderStatusesAction(orderIds);
+    if (res.success && res.data) {
+      const statusMap = new Map(res.data.map((item) => [item.id, item.status]));
+
+      setOrdersList((prev) => {
+        // Detect if any order just transitioned to ready
+        const justReadyOrder = prev.find((o) => o.orderId && statusMap.get(o.orderId) === 'ready' && o.status !== 'ready');
+        if (justReadyOrder) {
+          triggerReadyAlert(justReadyOrder.tokenNumber);
+        }
+
+        // Keep only active (not completed / cancelled)
+        const updated = prev
+          .map((o) => {
+            const dbStatus = o.orderId ? statusMap.get(o.orderId) : undefined;
+            return dbStatus ? { ...o, status: dbStatus } : o;
+          })
+          .filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+          } catch {}
+        }
+        return updated;
+      });
+
+      setActiveOrder((prev) => {
+        if (!prev?.orderId) return prev;
+        const currentDbStatus = statusMap.get(prev.orderId);
+        if (currentDbStatus === 'completed' || currentDbStatus === 'cancelled') {
+          return null;
+        }
+        return currentDbStatus ? { ...prev, status: currentDbStatus } : prev;
+      });
+    }
+  }, [storageKey, triggerReadyAlert]);
+
+  // ── 1. Restore placed active orders from localStorage on mount & verify ───
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed: ActiveOrder[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const activeOnly = parsed.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+          setOrdersList(activeOnly);
+          setActiveOrder(activeOnly.length > 0 ? activeOnly[activeOnly.length - 1] : null);
+          // Verify with database immediately on mount
+          verifyOrderStatuses(activeOnly);
+        }
+      }
+    } catch {
+      // Ignored if storage is blocked
+    }
+  }, [storageKey, verifyOrderStatuses]);
+
+  // ── 2. Smart Background Polling for Customer (every 4 seconds) ────────────
+  useEffect(() => {
+    if (ordersList.length === 0) return;
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        verifyOrderStatuses(ordersList);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [ordersList, verifyOrderStatuses]);
+
+  // Helper to persist orders state
+  const saveOrders = (orders: ActiveOrder[]) => {
+    // Keep active orders
+    const activeOnly = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+    setOrdersList(activeOnly);
+    setActiveOrder(activeOnly.length > 0 ? activeOnly[activeOnly.length - 1] : null);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(activeOnly));
+      } catch {}
+    }
+  };
 
   // Derive ordered cart items from itemQuantities for CartSheet
   const cartItems = Object.entries(cart.itemQuantities)
@@ -74,6 +213,49 @@ export default function PublicMenuView({
     }
     track('menu_view');
   }, [track]);
+
+  // ── Customer Realtime Status Subscriptions for all placed orders ───────────
+  useEffect(() => {
+    const orderIds = ordersList.map((o) => o.orderId).filter(Boolean) as string[];
+    if (orderIds.length === 0) return;
+
+    const unsubs = orderIds.map((id) =>
+      subscribeToOrder(id, (payload) => {
+        if (payload.status === 'completed' || payload.status === 'cancelled') {
+          // Vendor clicked "Done" -> close this order from customer view and localStorage
+          setOrdersList((prev) => {
+            const next = prev.filter((o) => o.orderId !== id);
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(storageKey, JSON.stringify(next));
+              } catch {}
+            }
+            return next;
+          });
+          setActiveOrder((prev) => (prev?.orderId === id ? null : prev));
+        } else {
+          // Vendor updated status to "ready" or "preparing" -> keep open, update status badge
+          if (payload.status === 'ready') {
+            triggerReadyAlert(payload.token);
+          }
+          setOrdersList((prev) => {
+            const next = prev.map((o) => (o.orderId === id ? { ...o, status: payload.status } : o));
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(storageKey, JSON.stringify(next));
+              } catch {}
+            }
+            return next;
+          });
+          setActiveOrder((prev) => (prev?.orderId === id ? { ...prev, status: payload.status } : prev));
+        }
+      })
+    );
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [ordersList.map((o) => o.orderId).join(','), storageKey]);
 
   // ── Event handlers ─────────────────────────────────────────────────────────
   const handleItemClick = (item: FoodCardItem) => {
@@ -353,14 +535,14 @@ export default function PublicMenuView({
           vendorAddress={vendorAddress}
           whatsapp={whatsapp}
           phone={phone}
+          shopId={shopId}
           onClose={() => setShowCart(false)}
           onIncrement={cart.incrementItem}
           onDecrement={cart.decrementItem}
           onRemove={cart.removeItem}
           onClearCart={cart.clearCart}
-          onOrderPlaced={(order) => {
-            setActiveOrder(order);
-            setOrdersList(prev => [...prev, order]);
+          onOrderPlaced={(order: ActiveOrder) => {
+            saveOrders([...ordersList, order]);
           }}
           initialOrderStatus={cart.cartSummary.totalItemsCount === 0 && (ordersList.length > 0 || activeOrder) ? 'success' : 'idle'}
           activeOrder={activeOrder}

@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Share2, Download, QrCode } from 'lucide-react';
+import { Share2, Download, QrCode, Loader2, X, Trash2 } from 'lucide-react';
 import QRCode from 'qrcode';
+import type { ShopTable } from '../../../../../drizzle/schema/shop-tables';
+import { getTablesAction } from '@/actions/table/get-tables';
+import { addTableAction } from '@/actions/table/add-table';
+import { deleteTableAction } from '@/actions/table/delete-table';
 
 export const BURGER_TEMPLATE_URL =
   'https://res.cloudinary.com/dfledgwk1/image/upload/v1785741942/qr-temp-1_ajxuz5.png';
@@ -68,8 +72,9 @@ export async function renderBurgerCardToCanvas(opts: {
   accentColor: string;
   templateImg: HTMLImageElement | null;
   logoImg?: HTMLImageElement | null;
+  tableLabel?: string;
 }): Promise<HTMLCanvasElement> {
-  const { vendorName, vendorAddress, qrModules, accentColor, templateImg, logoImg } = opts;
+  const { vendorName, vendorAddress, qrModules, accentColor, templateImg, logoImg, tableLabel } = opts;
   const W = 460, H = 710;
   const canvas = document.createElement('canvas');
   canvas.width = W * 2; canvas.height = H * 2; // 2x retina
@@ -123,10 +128,10 @@ export async function renderBurgerCardToCanvas(opts: {
     ctx.fillText('MyStreetMenu', W / 2, 50);
   }
 
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = '500 13px Inter, system-ui, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 15px Inter, system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Scan to view our menu', W / 2, 78);
+  ctx.fillText(tableLabel ? `Table ${tableLabel}` : 'Scan to view our menu', W / 2, 78);
 
   // --- Burger QR Container (Enlarged for Prominence) ---
   const bX = W / 2 - 180, bY = 115, bW = 360, bH = 460;
@@ -219,9 +224,9 @@ export async function renderBurgerCardToCanvas(opts: {
   // --- Vendor Info at Bottom ---
   const infoY = bY + bH + 46;
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 26px Inter, system-ui, sans-serif';
+  ctx.font = 'bold 24px Inter, system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(vendorName, W / 2, infoY);
+  ctx.fillText(tableLabel ? `${vendorName} • Table ${tableLabel}` : vendorName, W / 2, infoY);
 
   return canvas;
 }
@@ -275,11 +280,30 @@ export default function BurgerCardTemplate({
   publicMenuUrl,
   accentColor = '#f77512',
 }: BurgerCardTemplateProps) {
+  // DB-backed table state
+  const [dbTables, setDbTables] = useState<ShopTable[]>([]);
+  const [selectedTableId, setSelectedTableId] = useState<string>(''); // '' = Counter QR
+  const [tableLoading, setTableLoading] = useState(true);
+  const [customTableInput, setCustomTableInput] = useState<string>('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  // Slim confirmation modal state for deleting tables
+  const [deletingTable, setDeletingTable] = useState<{ id: string; label: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [templateImg, setTemplateImg] = useState<HTMLImageElement | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [shared, setShared] = useState(false);
   const [templateImgLoaded, setTemplateImgLoaded] = useState(false);
+
+  // Load tables from DB on mount
+  useEffect(() => {
+    getTablesAction().then((res) => {
+      if (res.success && res.data) setDbTables(res.data);
+      setTableLoading(false);
+    });
+  }, []);
 
   // Preload Cloudinary template image & text logo
   useEffect(() => {
@@ -292,18 +316,62 @@ export default function BurgerCardTemplate({
       .catch(() => console.warn('Failed to load text logo image'));
   }, []);
 
-  // Append ?qr=1&src=qr so the public menu page fires the qr_scan analytics event
+  // The currently selected table row (null = Counter QR)
+  const activeTableRow = dbTables.find((t) => t.id === selectedTableId) ?? null;
+  const activeTable = activeTableRow?.label ?? '';  // empty = counter
+
+  // Add a new table to DB and auto-select it
+  const handleAddCustomTable = async (label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    setIsAdding(true);
+    const res = await addTableAction({ label: trimmed });
+    if (res.success && res.data) {
+      setDbTables((prev) => [...prev, res.data!]);
+      setSelectedTableId(res.data.id);
+    }
+    setCustomTableInput('');
+    setIsAdding(false);
+    setSelectedTableId(res.success && res.data ? res.data.id : selectedTableId);
+  };
+
+  // Delete table after confirmation in slim modal
+  const handleConfirmDelete = async () => {
+    if (!deletingTable) return;
+    setIsDeleting(true);
+    const tableId = deletingTable.id;
+    const res = await deleteTableAction({ tableId });
+    if (res.success) {
+      setDbTables((prev) => prev.filter((t) => t.id !== tableId));
+      if (selectedTableId === tableId) setSelectedTableId('');
+    }
+    setIsDeleting(false);
+    setDeletingTable(null);
+  };
+
+  // Effective table label (empty = counter/general)
+
+  // Build QR URL: ?t=<table UUID> (tamper-proof) for registered tables,
+  // or plain menu URL for Counter QR
   const qrUrl = useMemo(() => {
     if (!publicMenuUrl) return publicMenuUrl;
     try {
       const u = new URL(publicMenuUrl);
       u.searchParams.set('qr', '1');
       u.searchParams.set('src', 'qr');
+      if (activeTableRow) {
+        u.searchParams.set('t', activeTableRow.id); // UUID — impossible to guess
+        u.searchParams.delete('table');
+      } else {
+        u.searchParams.delete('t');
+        u.searchParams.delete('table');
+      }
       return u.toString();
     } catch {
-      return `${publicMenuUrl}?qr=1&src=qr`;
+      const tableParam = activeTableRow ? `&t=${activeTableRow.id}` : '';
+      return `${publicMenuUrl}?qr=1&src=qr${tableParam}`;
     }
-  }, [publicMenuUrl]);
+  }, [publicMenuUrl, activeTableRow]);
 
   const qrModules = buildQrModules(qrUrl);
   const M = qrModules.length;
@@ -334,15 +402,17 @@ export default function BurgerCardTemplate({
         accentColor,
         templateImg: loadedImg,
         logoImg: loadedLogo,
+        tableLabel: activeTable,
       });
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
-      a.download = 'mystreetmenu-qr-card.png';
+      const cleanName = vendorName.replace(/[^a-zA-Z0-9]/g, '_');
+      a.download = activeTable ? `${cleanName}_Table_${activeTable}_QR.png` : `${cleanName}_Menu_QR.png`;
       a.click();
     } finally {
       setDownloading(false);
     }
-  }, [vendorName, vendorAddress, qrModules, accentColor, templateImg, logoImg]);
+  }, [vendorName, vendorAddress, qrModules, accentColor, templateImg, logoImg, activeTable]);
 
   const handleDownloadQrOnly = useCallback(async () => {
     try {
@@ -358,17 +428,17 @@ export default function BurgerCardTemplate({
           dark: '#0f172a',
           light: '#ffffff',
         },
-        errorCorrectionLevel: 'H',
       });
 
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
-      a.download = `${vendorName ? vendorName.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'vendor'}-qr-code.png`;
+      const cleanName = vendorName.replace(/[^a-zA-Z0-9]/g, '_');
+      a.download = activeTable ? `${cleanName}_Table_${activeTable}_Raw_QR.png` : `${cleanName}_QR.png`;
       a.click();
     } catch (err) {
-      console.error('Failed to download QR code image:', err);
+      console.error('Failed to download QR only:', err);
     }
-  }, [publicMenuUrl, vendorName]);
+  }, [qrUrl, vendorName, activeTable]);
 
   const handleShare = useCallback(async () => {
     if (navigator.share) {
@@ -395,6 +465,149 @@ export default function BurgerCardTemplate({
   return (
     <div className="w-full flex flex-col items-center sm:items-start select-none pt-0 pb-2">
 
+      {/* ── DB-Backed Table Selector ── */}
+      <div className="w-full max-w-[310px] xs:max-w-[340px] sm:max-w-[380px] bg-white rounded-2xl p-2 sm:p-2.5 border border-gray-200/90 shadow-xs mb-3 sm:mb-4 relative">
+        {/* Scrollable pills */}
+        <div
+          id="table-tabs-container"
+          className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scroll-smooth snap-x snap-mandatory no-scrollbar"
+        >
+          {/* Counter QR (no table) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              setSelectedTableId('');
+              e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 snap-center active:scale-95 ${
+              !selectedTableId
+                ? 'bg-[#f77512] text-white shadow-xs'
+                : 'bg-gray-100/90 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Counter QR
+          </button>
+
+          {/* Loading skeleton */}
+          {tableLoading && (
+            <div className="flex items-center gap-1.5">
+              {[1,2,3].map((i) => (
+                <div key={i} className="h-7 w-16 rounded-xl bg-gray-100 animate-pulse shrink-0" />
+              ))}
+            </div>
+          )}
+
+          {/* DB Tables from vendor's shop */}
+          {!tableLoading && dbTables.map((table) => {
+            const isSelected = selectedTableId === table.id;
+            return (
+              <button
+                key={table.id}
+                type="button"
+                onClick={(e) => {
+                  setSelectedTableId(table.id);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 snap-center flex items-center gap-1.5 active:scale-95 ${
+                  isSelected
+                    ? 'bg-[#f77512] text-white shadow-xs'
+                    : 'bg-gray-100/90 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <span>Table {table.label}</span>
+                {isSelected && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingTable({ id: table.id, label: table.label });
+                    }}
+                    className="ml-0.5 p-0.5 rounded-full hover:bg-black/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+                    title={`Delete Table ${table.label}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Add new table button */}
+          {!tableLoading && (
+            <button
+              type="button"
+              onClick={(e) => {
+                setSelectedTableId('new');
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 snap-center active:scale-95 ${
+                selectedTableId === 'new'
+                  ? 'bg-[#f77512] text-white shadow-xs'
+                  : 'bg-gray-100/90 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              + Add Table
+            </button>
+          )}
+        </div>
+
+        {/* Add Table Form */}
+        {selectedTableId === 'new' && !deletingTable && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAddCustomTable(customTableInput);
+            }}
+            className="pt-2 mt-1.5 border-t border-gray-100 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200"
+          >
+            <input
+              type="text"
+              placeholder="Enter table name (e.g. 7, VIP, Terrace)"
+              value={customTableInput}
+              onChange={(e) => setCustomTableInput(e.target.value)}
+              className="flex-1 bg-gray-50 border border-gray-200 focus:border-[#f77512] focus:bg-white rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-900 focus:outline-none transition-all placeholder:text-gray-400 placeholder:font-normal"
+              autoFocus
+            />
+            <button
+              type="submit"
+              disabled={!customTableInput.trim() || isAdding}
+              className="px-3 py-1.5 bg-[#f77512] hover:bg-[#e0670d] text-white rounded-xl text-[11.5px] font-bold transition-all active:scale-95 disabled:opacity-40 cursor-pointer shadow-2xs shrink-0 flex items-center gap-1"
+            >
+              {isAdding ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Create'}
+            </button>
+          </form>
+        )}
+
+        {/* Inline Delete Confirmation Bar */}
+        {deletingTable && (
+          <div className="pt-2 mt-1.5 border-t border-gray-100 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
+            <span className="text-xs font-semibold text-gray-800 pl-1">
+              Delete <span className="font-bold text-red-600">Table {deletingTable.label}</span>?
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setDeletingTable(null)}
+                disabled={isDeleting}
+                className="px-2.5 py-1 text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-2.5 py-1 text-[11px] font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+              >
+                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Delete'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+
       {/* ── Full Styled Card ── */}
       <div
         id="burger-qr-card"
@@ -415,8 +628,8 @@ export default function BurgerCardTemplate({
             alt="MyStreetMenu"
             className="h-7 sm:h-9 object-contain brightness-0 invert z-10 drop-shadow-xs"
           />
-          <span className="relative text-white/80 text-[11px] sm:text-[13px] font-medium mt-0.5 z-10">
-            Scan to view our menu
+          <span className="relative text-white text-[13px] sm:text-[15px] font-black mt-0.5 z-10 tracking-tight">
+            {activeTable ? `Table ${activeTable}` : 'Scan to view our menu'}
           </span>
         </div>
 
