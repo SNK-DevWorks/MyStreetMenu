@@ -1,19 +1,25 @@
 import { z } from 'zod';
 
 // ── Order Item Payload ────────────────────────────────────────────────────────
+//
+// Security: browser sends ONLY menuItemId + quantity.
+// Server fetches name, image, and price from menu_items DB.
+// This prevents client-side price/name/image manipulation.
 
 export const orderItemInputSchema = z.object({
-  menuItemId: z.string().uuid().nullable().optional(),
-  name:       z.string().min(1, 'Item name required'),
-  image:      z.string().nullable().optional(),
-  price:      z.number().min(0, 'Price must be positive'),
-  quantity:   z.number().int().min(1, 'Quantity must be at least 1'),
+  menuItemId: z.string().uuid('Invalid item ID'),
+  quantity:   z.number().int().min(1, 'Quantity must be at least 1').max(50, 'Max 50 per item'),
 });
 
 // ── Place Order Payload ───────────────────────────────────────────────────────
+//
+// Security notes:
+//   - shopSlug (not shopId): server resolves slug → shopId. Browser never nominates a shopId.
+//   - customerUserId is NOT in this schema — it is resolved server-side from the auth session.
+//   - items contain only menuItemId + quantity — no price, name, or image from browser.
 
 export const placeOrderSchema = z.object({
-  shopId:       z.string().uuid('Invalid shop'),
+  shopSlug:     z.string().min(1, 'Shop slug required').max(100),
   orderSource:  z.enum(['qr', 'direct_link', 'manual', 'admin']).default('direct_link'),
 
   // Customer info — all optional
@@ -30,8 +36,8 @@ export const placeOrderSchema = z.object({
     .enum(['counter_cash', 'counter_card', 'counter_upi', 'online_upi', 'online_card'])
     .default('counter_cash'),
 
-  // Items — at least one required
-  items: z.array(orderItemInputSchema).min(1, 'Order must have at least one item'),
+  // Items — at least one required; server fetches price/name/image from DB
+  items: z.array(orderItemInputSchema).min(1, 'Order must have at least one item').max(50),
 });
 
 
@@ -46,3 +52,4 @@ export const updateOrderStatusSchema = z.object({
 });
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+

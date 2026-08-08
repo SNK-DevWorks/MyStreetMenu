@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronRight, Check } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { CartSummary, ActiveOrder } from '../types';
 import { getCategoryEmoji, formatSavings } from '../utils';
 
@@ -88,39 +88,53 @@ export function FloatingCartBar({
   const activeOrders = ordersList.length > 0 ? ordersList : (activeOrder ? [activeOrder] : []);
 
   if (activeOrders.length > 0 && onViewActiveOrder) {
-    const latestOrder = activeOrders[activeOrders.length - 1];
-    const totalItemsCount = activeOrders.reduce((sum, o) => sum + o.itemsCount, 0);
+    const totalItemsCount    = activeOrders.reduce((sum, o) => sum + o.itemsCount, 0);
     const combinedTotalPrice = activeOrders.reduce((sum, o) => sum + o.totalPrice, 0);
 
-    const isReady = latestOrder.status === 'ready';
-    const isPreparing = latestOrder.status === 'preparing';
+    // Priority: ready > preparing > new
+    const readyOrders    = activeOrders.filter(o => o.status === 'ready');
+    const preparingOrders = activeOrders.filter(o => o.status === 'preparing');
 
-    const bannerBg = isReady
-      ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
-      : isPreparing
-      ? 'bg-amber-50 text-amber-800 border-amber-200'
-      : 'bg-emerald-50/95 text-emerald-800 border-emerald-100';
+    const hasReady    = readyOrders.length > 0;
+    const hasPreparing = preparingOrders.length > 0;
 
-    const bannerText = isReady
-      ? `🎉 Your order is ready! Token #${latestOrder.tokenNumber}`
-      : isPreparing
-      ? `👨‍🍳 Preparing your order • Token #${latestOrder.tokenNumber}`
-      : activeOrders.length > 1
-      ? `${activeOrders.length} Orders Placed • Latest: Token #${latestOrder.tokenNumber}`
-      : `Order Placed • Token #${latestOrder.tokenNumber}`;
+    // Always use the latest (newest placed) order as the primary display
+    const latestOrder = activeOrders[activeOrders.length - 1];
+    const representativeOrder = latestOrder;
+
+    // Banner reflects the newest order's status with prior ready order indicators
+    let bannerBg   = 'bg-slate-100 text-slate-700 border-slate-200';
+    let bannerText = '';
+
+    if (latestOrder.status === 'ready') {
+      bannerBg = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      bannerText = `Order Ready — Token #${latestOrder.tokenNumber}`;
+    } else if (latestOrder.status === 'preparing') {
+      bannerBg = 'bg-amber-50 text-amber-800 border-amber-200';
+      bannerText = `Order Preparing — Token #${latestOrder.tokenNumber}`;
+    } else {
+      bannerBg = 'bg-blue-50 text-blue-800 border-blue-200';
+      bannerText = `Order Received — Token #${latestOrder.tokenNumber}`;
+    }
+
+    // If there are multiple orders and a prior one is ready, note it cleanly
+    const priorReady = activeOrders.filter((o) => o.orderId !== latestOrder.orderId && o.status === 'ready');
+    if (priorReady.length > 0 && latestOrder.status !== 'ready') {
+      const priorTokens = priorReady.map((o) => `#${o.tokenNumber}`).join(', ');
+      bannerText += ` • (Prior Token ${priorTokens} Ready)`;
+    }
 
     return (
       <div className="fixed bottom-4 left-4 right-4 z-40 max-w-lg mx-auto animate-in slide-in-from-bottom duration-300">
         <div className="bg-white rounded-2xl shadow-2xl border border-orange-100/90 overflow-hidden">
-          {/* Order Status Top Banner */}
-          <div className={`border-b px-4 py-2 flex items-center gap-2 ${bannerBg}`}>
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isReady ? 'bg-white text-emerald-600' : 'bg-[#00B56A] text-white'}`}>
-              <Check size={12} strokeWidth={3} />
-            </div>
-            <p className={`text-xs sm:text-[13px] font-bold truncate ${isReady ? 'text-white' : ''}`}>
+          {/* Order Status Top Banner — Clean Linear, No Emoji, Latest Order First */}
+          <div className={`border-b px-4 py-2 flex items-center ${bannerBg}`}>
+            <p className="text-xs sm:text-[13px] font-semibold truncate">
               {bannerText}
             </p>
           </div>
+
+
 
           {/* Main Order Action Bar */}
           <div
@@ -130,15 +144,15 @@ export function FloatingCartBar({
             <div className="flex items-center gap-3 min-w-0">
               {/* Item Thumbnail */}
               <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/20 border border-white/40 shrink-0 flex items-center justify-center">
-                {latestOrder.lastAddedItem?.image ? (
+                {representativeOrder.lastAddedItem?.image ? (
                   <img
-                    src={latestOrder.lastAddedItem.image}
-                    alt={latestOrder.lastAddedItem.title}
+                    src={representativeOrder.lastAddedItem.image}
+                    alt={representativeOrder.lastAddedItem.title}
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <span className="text-xl">
-                    {getCategoryEmoji(latestOrder.lastAddedItem?.category || '')}
+                    {getCategoryEmoji(representativeOrder.lastAddedItem?.category || '')}
                   </span>
                 )}
               </div>

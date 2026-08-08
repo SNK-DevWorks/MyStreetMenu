@@ -193,20 +193,16 @@ export function useLiveOrders(): UseLiveOrdersReturn {
 
     const unsubscribe = subscribeToShopOrders(shopId, {
       onInsert: (payload) => {
-        const newOrder = payloadToOrder(payload);
-        setOrders((prev) => {
-          // Avoid duplicate if initial fetch or polling already included it
-          if (prev.some((o) => o.id === payload.id)) return prev;
-          return [newOrder, ...prev];
-        });
+        refreshOrders(true);
         playNotificationSound();
         flashBrowserTitle(`New Order ${payload.token}`);
 
         // Vibrate on mobile
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]);
+          try { navigator.vibrate([200, 100, 200]); } catch {}
         }
       },
+
 
       onUpdate: (payload) => {
         setOrders((prev) => {

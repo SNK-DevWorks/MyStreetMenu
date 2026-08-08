@@ -33,6 +33,48 @@ export const adminService = {
   },
 
   /**
+   * Update full vendor & shop details (admin edit).
+   */
+  async updateVendorDetails(
+    userId: string,
+    data: {
+      owner?: string;
+      phone?: string;
+      shopName?: string;
+      foodType?: string;
+      whatsapp?: string;
+      mapUrl?: string;
+      address?: string;
+      isActive?: boolean;
+    }
+  ) {
+    const userUpdates: Record<string, unknown> = {};
+    if (data.owner !== undefined) userUpdates.name = data.owner;
+    if (data.phone !== undefined) userUpdates.phone = data.phone;
+    if (data.isActive !== undefined) userUpdates.isActive = data.isActive;
+
+    if (Object.keys(userUpdates).length > 0) {
+      await userRepository.update(userId, userUpdates);
+    }
+
+    const shop = await shopRepository.findByUserId(userId);
+    if (shop) {
+      const shopUpdates: Record<string, unknown> = {};
+      if (data.shopName !== undefined) shopUpdates.name = data.shopName;
+      if (data.foodType !== undefined) shopUpdates.foodType = data.foodType;
+      if (data.phone !== undefined) shopUpdates.phone = data.phone;
+      if (data.whatsapp !== undefined) shopUpdates.whatsapp = data.whatsapp;
+      if (data.mapUrl !== undefined) shopUpdates.mapUrl = data.mapUrl;
+      if (data.address !== undefined) shopUpdates.address = data.address;
+      if (data.isActive !== undefined) shopUpdates.isActive = data.isActive;
+
+      if (Object.keys(shopUpdates).length > 0) {
+        await shopRepository.update(shop.id, shopUpdates);
+      }
+    }
+  },
+
+  /**
    * Delete a vendor and their shop (cascade).
    */
   async deleteVendor(userId: string) {

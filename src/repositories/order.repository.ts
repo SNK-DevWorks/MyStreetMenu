@@ -5,6 +5,7 @@ import { orderItems } from '../../drizzle/schema/order-items';
 import type { NewOrder, Order } from '../../drizzle/schema/orders';
 import type { NewOrderItem } from '../../drizzle/schema/order-items';
 import type { OrderStatus } from '@/lib/orders/order-status';
+import { getMenuImage } from '@/lib/images';
 import type { LiveOrder } from '@/types/order';
 import { STATUS_TIMESTAMPS } from '@/lib/orders/order-status';
 
@@ -33,12 +34,13 @@ function mapToLiveOrder(order: Order, items: typeof orderItems.$inferSelect[]): 
       id:         i.id,
       menuItemId: i.menuItemId ?? null,
       name:       i.name,
-      image:      i.image ?? null,
+      image:      i.image ? (getMenuImage(i.image) || i.image) : null,
       price:      parseFloat(i.price),
       quantity:   i.quantity,
     })),
   };
 }
+
 
 export const orderRepository = {
   /**

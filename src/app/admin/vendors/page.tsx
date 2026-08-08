@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   VendorFilters,
   VendorTable,
@@ -9,15 +9,25 @@ import {
   EmptyState,
   Vendor,
 } from '@/features/admin/vendors';
+import {
+  getAdminVendorsAction,
+  activateVendorAction,
+  deactivateVendorAction,
+  deleteVendorAction,
+  updateVendorDetailsAction,
+} from '@/actions/admin/manage-vendor';
 
 const initialVendors: Vendor[] = [
   {
     id: '1',
     logoEmoji: '🍔',
-    shopName: 'Burger Corner',
+    shopName: 'SNK DevWorks',
+    description: 'Best fast food and artisanal burgers in Kolkata',
     owner: 'Rahul Das',
-    phone: '+91 98765 43210',
+    phone: '7890700156',
+    whatsapp: '7890700156',
     location: 'Kolkata',
+    mapUrl: 'SNK DEVWORKS',
     status: 'Active',
     joined: '12 Jul',
   },
@@ -25,36 +35,20 @@ const initialVendors: Vendor[] = [
     id: '2',
     logoEmoji: '☕',
     shopName: 'Tea Time',
+    description: 'Authentic handcrafted teas & snacks',
     owner: 'Anit Sharma',
     phone: '+91 98123 45678',
+    whatsapp: '+91 98123 45678',
     location: 'Kolkata',
+    mapUrl: 'Tea Time Kolkata',
     status: 'Active',
     joined: '11 Jul',
-  },
-  {
-    id: '3',
-    logoEmoji: '🌯',
-    shopName: 'Roll House',
-    owner: 'Vikram Singh',
-    phone: '+91 97890 12345',
-    location: 'Mumbai',
-    status: 'Inactive',
-    joined: '10 Jul',
-  },
-  {
-    id: '4',
-    logoEmoji: '🍕',
-    shopName: 'Pizza Hub',
-    owner: 'Sneha Roy',
-    phone: '+91 96543 21098',
-    location: 'Delhi',
-    status: 'Active',
-    joined: '09 Jul',
   },
 ];
 
 export default function AdminVendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortBy, setSortBy] = useState('Newest');
@@ -66,6 +60,47 @@ export default function AdminVendorsPage() {
   // Edit Modal State
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Fetch real vendor data from database
+  const loadVendors = useCallback(async () => {
+    try {
+      const res = await getAdminVendorsAction();
+      if (res.success && res.data && res.data.length > 0) {
+        const formatted: Vendor[] = res.data.map((item) => {
+          const joinedDate = item.userCreatedAt
+            ? new Date(item.userCreatedAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })
+            : 'Recently';
+
+          return {
+            id: item.userId,
+            userId: item.userId,
+            shopId: item.shopId ?? undefined,
+            logoEmoji: item.shopLogoUrl || '🏪',
+            shopName: item.shopName || item.userName || 'Unnamed Shop',
+            owner: item.userName || 'Vendor Owner',
+            email: item.userEmail || '',
+            phone: item.shopPhone || item.userPhone || '',
+            whatsapp: item.shopWhatsapp || item.shopPhone || item.userPhone || '',
+            description: item.shopFoodType || '',
+            foodType: item.shopFoodType || '',
+            location: item.shopAddress || 'Not set',
+            mapUrl: item.shopMapUrl || '',
+            status: item.shopIsActive && item.userIsActive ? 'Active' : 'Inactive',
+            joined: joinedDate,
+          };
+        });
+        setVendors(formatted);
+      }
+    } catch {
+      // Fall back to initial vendors on error or empty DB
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVendors();
+  }, [loadVendors]);
 
   const filteredVendors = useMemo(() => {
     let result = vendors.filter((v) => {
@@ -89,7 +124,9 @@ export default function AdminVendorsPage() {
     return result;
   }, [vendors, searchQuery, statusFilter, sortBy]);
 
-  const handleAction = (actionName: string, vendor: Vendor) => {
+  const handleAction = async (actionName: string, vendor: Vendor) => {
+    const targetUserId = vendor.userId || vendor.id;
+
     if (actionName === 'View Details') {
       setSelectedVendor(vendor);
       setIsDrawerOpen(true);
@@ -103,6 +140,7 @@ export default function AdminVendorsPage() {
       if (selectedVendor?.id === vendor.id) {
         setSelectedVendor((prev) => (prev ? { ...prev, status: 'Active' } : null));
       }
+      await activateVendorAction(targetUserId);
     } else if (actionName === 'Deactivate') {
       setVendors((prev) =>
         prev.map((v) => (v.id === vendor.id ? { ...v, status: 'Inactive' } : v))
@@ -110,22 +148,40 @@ export default function AdminVendorsPage() {
       if (selectedVendor?.id === vendor.id) {
         setSelectedVendor((prev) => (prev ? { ...prev, status: 'Inactive' } : null));
       }
+      await deactivateVendorAction(targetUserId);
     } else if (actionName === 'Delete Vendor') {
       setVendors((prev) => prev.filter((v) => v.id !== vendor.id));
       if (selectedVendor?.id === vendor.id) {
         setIsDrawerOpen(false);
         setSelectedVendor(null);
       }
+      await deleteVendorAction(targetUserId);
     }
   };
 
-  const handleSaveEditedVendor = (updatedVendor: Vendor) => {
+  const handleSaveEditedVendor = async (updatedVendor: Vendor) => {
+    const targetUserId = updatedVendor.userId || updatedVendor.id;
+
     setVendors((prev) =>
       prev.map((v) => (v.id === updatedVendor.id ? updatedVendor : v))
     );
     if (selectedVendor?.id === updatedVendor.id) {
       setSelectedVendor(updatedVendor);
     }
+
+    await updateVendorDetailsAction({
+      userId: targetUserId,
+      owner: updatedVendor.owner,
+      phone: updatedVendor.phone,
+      shopName: updatedVendor.shopName,
+      foodType: updatedVendor.description || updatedVendor.foodType,
+      whatsapp: updatedVendor.whatsapp,
+      mapUrl: updatedVendor.mapUrl,
+      address: updatedVendor.location,
+      isActive: updatedVendor.status === 'Active',
+    });
+
+    await loadVendors();
   };
 
   return (
@@ -139,7 +195,11 @@ export default function AdminVendorsPage() {
         setSortBy={setSortBy}
       />
 
-      {filteredVendors.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-gray-200">
+          <div className="h-6 w-6 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+        </div>
+      ) : filteredVendors.length > 0 ? (
         <VendorTable vendors={filteredVendors} onAction={handleAction} />
       ) : (
         <EmptyState />

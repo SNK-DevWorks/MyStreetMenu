@@ -35,6 +35,12 @@ export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
   shopId: uuid('shop_id').notNull().references(() => shops.id, { onDelete: 'cascade' }),
 
+  // Customer identity — links to Supabase auth.users (anonymous session)
+  // Nullable for legacy/existing orders; required for all new orders (enforced in service).
+  // References auth.users.id (Supabase-managed, cross-schema — FK constraint not used here,
+  // enforced via RLS instead).
+  customerUserId: uuid('customer_user_id'),
+
   // Order identity
   token: text('token').notNull(),           // "A01", "A02" — daily sequential per shop
 
@@ -44,6 +50,7 @@ export const orders = pgTable('orders', {
   // Customer info (snapshot at time of order)
   customerName: text('customer_name'),
   customerPhone: text('customer_phone'),
+
 
   // Table — two columns for full integrity:
   //   tableId    = FK to shop_tables (null if table deleted or walk-in)

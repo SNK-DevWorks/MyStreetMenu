@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Menu,
   X,
   Search,
   Bell,
-  ExternalLink
+  ExternalLink,
+  LogOut
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 interface NavItem {
   name: string;
@@ -35,11 +37,27 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const AUTH_PATHS = ['/admin/login'];
+const AUTH_PATHS = ['/snkdevworksadmin/login'];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error logging out:', err);
+    } finally {
+      router.replace('/snkdevworksadmin/login');
+      router.refresh();
+      setIsLoggingOut(false);
+    }
+  };
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -106,15 +124,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-600 rounded-full" />
           </button>
 
-          <div className="flex items-center gap-2.5 pl-2 border-l border-gray-200">
-            <div className="w-9 h-9 rounded-full bg-purple-600 text-white font-bold text-sm flex items-center justify-center shadow-xs">
-              A
-            </div>
-            <div className="hidden md:flex flex-col">
-              <span className="text-[13px] font-bold text-[#1f114a] leading-none">Admin User</span>
-              <span className="text-[11px] font-medium text-gray-500 mt-0.5">super@mystreetmenu.com</span>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -157,12 +166,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Sidebar Bottom / Sign Out */}
           <div className="pt-3 border-t border-gray-200/90">
-            <Link
-              href="/admin/login"
-              className="flex items-center px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <span>Sign Out</span>
-            </Link>
+              <LogOut className="w-4 h-4" />
+              <span>{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>
+            </button>
           </div>
         </aside>
 

@@ -77,7 +77,8 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
           if (response.ok) {
-            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, response.clone()));
+            const copy = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, copy));
           }
           return response;
         });
@@ -94,7 +95,8 @@ self.addEventListener('fetch', (event) => {
         return fetch(request).then((response) => {
           // Only cache successful non-redirect responses
           if (response.ok && response.status === 200) {
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, response.clone()));
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
           }
           return response;
         }).catch(() => cached || new Response('', { status: 404 }));
@@ -110,7 +112,8 @@ self.addEventListener('fetch', (event) => {
       fetch(request).then((response) => {
         // Only cache successful non-redirect responses
         if (response.ok && response.status === 200 && response.type !== 'opaqueredirect') {
-          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, response.clone()));
+          const copy = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, copy));
         }
         return response;
       }).catch(() => {
@@ -122,6 +125,7 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
+
 
   // Default: network only (don't cache unknown routes)
   event.respondWith(fetch(request));

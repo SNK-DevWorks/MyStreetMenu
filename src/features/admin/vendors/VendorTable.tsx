@@ -5,12 +5,18 @@ import { Eye, MoreVertical } from 'lucide-react';
 
 export interface Vendor {
   id: string;
+  shopId?: string;
+  userId?: string;
   logoEmoji: string;
   shopName: string;
   owner: string;
   email?: string;
   phone: string;
+  whatsapp?: string;
+  description?: string;
+  foodType?: string;
   location: string;
+  mapUrl?: string;
   status: 'Active' | 'Inactive' | string;
   joined: string;
 }

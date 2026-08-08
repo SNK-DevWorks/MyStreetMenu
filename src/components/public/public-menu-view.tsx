@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { FoodTypeIcon } from './menu/ui/food-type-icon';
 import { useCart } from './menu/hooks/use-cart';
@@ -19,8 +19,9 @@ import { ItemDetailSheet } from './menu/overlays/item-detail-sheet';
 import { AllSpecialsOverlay } from './menu/overlays/all-specials-overlay';
 import { CartSheet } from './menu/overlays/cart-sheet';
 import { useAnalytics } from '@/providers/analytics-provider';
-import { subscribeToOrder } from '@/lib/orders/realtime';
+import { createCustomerOrderRealtime } from '@/lib/orders/realtime';
 import { getCustomerOrderStatusesAction } from '@/actions/order/get-order-status';
+import { ensureAnonymousSession } from '@/lib/supabase/customer';
 import type { AnnouncementItem, PublicOfferItem, PublicMenuViewProps, ActiveOrder } from './menu/types';
 import type { FoodCardItem } from '@/components/shared/item';
 
@@ -34,11 +35,12 @@ export default function PublicMenuView({
   whatsapp = null,
   mapUrl = null,
   shopId,
+  shopSlug,
   items = [],
   categories = ['All Items'],
   offers = [],
   announcements = [],
-}: PublicMenuViewProps & { shopId?: string }) {
+}: PublicMenuViewProps & { shopId?: string; shopSlug?: string }) {
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { track } = useAnalytics();
   const search = useSearch();
@@ -53,6 +55,10 @@ export default function PublicMenuView({
   const [showCart, setShowCart] = useState(false);
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
   const [ordersList, setOrdersList] = useState<ActiveOrder[]>([]);
+  const [customerUserId, setCustomerUserId] = useState<string | null>(null);
+
+  // Single Realtime manager instance (persisted across re-renders)
+  const realtimeManagerRef = useRef(createCustomerOrderRealtime());
 
   const storageKey = `msm_active_orders_${shopId || 'default'}`;
 
@@ -80,12 +86,18 @@ export default function PublicMenuView({
       // Audio autoplay restrictions
     }
 
-    // 2. Strong Multi-Pulse Vibration Pattern (3 distinctive buzzes)
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    // 2. Strong Multi-Pulse Vibration Pattern (3 distinctive buzzes, only when user has interacted with frame)
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.vibrate === 'function' &&
+      (typeof (navigator as unknown as { userActivation?: { hasBeenActive?: boolean } }).userActivation === 'undefined' ||
+        (navigator as unknown as { userActivation?: { hasBeenActive?: boolean } }).userActivation?.hasBeenActive)
+    ) {
       try {
         navigator.vibrate([300, 100, 300, 100, 500]);
       } catch {}
     }
+
 
     // 3. Flash Browser Tab Title
     if (typeof document !== 'undefined') {
@@ -101,50 +113,70 @@ export default function PublicMenuView({
     }
   }, []);
 
+  // Keep a fresh ref to ordersList for use in async callbacks and timer intervals
+  const ordersListRef = useRef(ordersList);
+  useEffect(() => {
+    ordersListRef.current = ordersList;
+  }, [ordersList]);
+
   // ── Helper to verify and sync live order statuses from DB ───────────────────
+  // Used on mount, on Realtime reconnect, and during active order tracking.
   const verifyOrderStatuses = useCallback(async (currentOrders: ActiveOrder[]) => {
     const orderIds = currentOrders.map((o) => o.orderId).filter(Boolean) as string[];
     if (orderIds.length === 0) return;
 
-    const res = await getCustomerOrderStatusesAction(orderIds);
-    if (res.success && res.data) {
-      const statusMap = new Map(res.data.map((item) => [item.id, item.status]));
+    try {
+      const res = await getCustomerOrderStatusesAction(orderIds);
+      if (res.success && res.data && res.data.length > 0) {
+        const statusMap = new Map(res.data.map((item) => [item.id, item.status]));
 
-      setOrdersList((prev) => {
+        // Check if anything actually changed before triggering React state updates
+        const currentList = ordersListRef.current;
+        const hasChanges = currentList.some((o) => {
+          if (!o.orderId) return false;
+          const newStatus = statusMap.get(o.orderId);
+          return newStatus && newStatus !== o.status;
+        });
+
+        if (!hasChanges) return;
+
         // Detect if any order just transitioned to ready
-        const justReadyOrder = prev.find((o) => o.orderId && statusMap.get(o.orderId) === 'ready' && o.status !== 'ready');
-        if (justReadyOrder) {
-          triggerReadyAlert(justReadyOrder.tokenNumber);
-        }
+        const justReadyOrder = currentList.find(
+          (o) => o.orderId && statusMap.get(o.orderId) === 'ready' && o.status !== 'ready',
+        );
+        if (justReadyOrder) triggerReadyAlert(justReadyOrder.tokenNumber);
 
-        // Keep only active (not completed / cancelled)
-        const updated = prev
+        // Update orders list
+        const updated = currentList
           .map((o) => {
             const dbStatus = o.orderId ? statusMap.get(o.orderId) : undefined;
             return dbStatus ? { ...o, status: dbStatus } : o;
           })
           .filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
 
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(storageKey, JSON.stringify(updated));
-          } catch {}
-        }
-        return updated;
-      });
+        setOrdersList(updated);
+        try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
 
-      setActiveOrder((prev) => {
-        if (!prev?.orderId) return prev;
-        const currentDbStatus = statusMap.get(prev.orderId);
-        if (currentDbStatus === 'completed' || currentDbStatus === 'cancelled') {
-          return null;
-        }
-        return currentDbStatus ? { ...prev, status: currentDbStatus } : prev;
-      });
+        setActiveOrder((prev) => {
+          if (!prev?.orderId) return prev;
+          const dbStatus = statusMap.get(prev.orderId);
+          if (dbStatus === 'completed' || dbStatus === 'cancelled') return null;
+          return dbStatus ? { ...prev, status: dbStatus } : prev;
+        });
+      }
+    } catch {
+      // Ignore errors — Realtime will deliver the next update
     }
   }, [storageKey, triggerReadyAlert]);
 
-  // ── 1. Restore placed active orders from localStorage on mount & verify ───
+  // ── 1. Ensure anonymous Supabase session on mount ────────────────────────
+  useEffect(() => {
+    ensureAnonymousSession().then((uid) => {
+      if (uid) setCustomerUserId(uid);
+    });
+  }, []);
+
+  // ── 2. Restore placed active orders from localStorage on mount & verify ───
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -155,7 +187,7 @@ export default function PublicMenuView({
           const activeOnly = parsed.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
           setOrdersList(activeOnly);
           setActiveOrder(activeOnly.length > 0 ? activeOnly[activeOnly.length - 1] : null);
-          // Verify with database immediately on mount
+          // Verify with database on mount
           verifyOrderStatuses(activeOnly);
         }
       }
@@ -164,18 +196,19 @@ export default function PublicMenuView({
     }
   }, [storageKey, verifyOrderStatuses]);
 
-  // ── 2. Smart Background Polling for Customer (every 4 seconds) ────────────
+  // ── 3. Smart Background Status Check (every 4 seconds for active orders) ──
+  // Dual-channel sync: Instant Realtime WebSocket + smart fallback check
   useEffect(() => {
     if (ordersList.length === 0) return;
 
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        verifyOrderStatuses(ordersList);
+        verifyOrderStatuses(ordersListRef.current);
       }
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [ordersList, verifyOrderStatuses]);
+  }, [ordersList.length, verifyOrderStatuses]);
 
   // Helper to persist orders state
   const saveOrders = (orders: ActiveOrder[]) => {
@@ -214,48 +247,62 @@ export default function PublicMenuView({
     track('menu_view');
   }, [track]);
 
-  // ── Customer Realtime Status Subscriptions for all placed orders ───────────
+  // ── Customer Realtime — single channel for all active orders ─────────────
   useEffect(() => {
     const orderIds = ordersList.map((o) => o.orderId).filter(Boolean) as string[];
-    if (orderIds.length === 0) return;
+    const rt = realtimeManagerRef.current;
 
-    const unsubs = orderIds.map((id) =>
-      subscribeToOrder(id, (payload) => {
-        if (payload.status === 'completed' || payload.status === 'cancelled') {
-          // Vendor clicked "Done" -> close this order from customer view and localStorage
-          setOrdersList((prev) => {
-            const next = prev.filter((o) => o.orderId !== id);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem(storageKey, JSON.stringify(next));
-              } catch {}
-            }
-            return next;
-          });
+    if (orderIds.length === 0) {
+      rt.unsubscribe();
+      return;
+    }
+
+    rt.subscribe(orderIds, {
+      onUpdate: (payload) => {
+        const { id, status, token } = payload;
+
+        if (status === 'completed' || status === 'cancelled') {
+          // Vendor completed/cancelled → remove from customer view
+          const next = ordersListRef.current.filter((o) => o.orderId !== id);
+          setOrdersList(next);
+          try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
           setActiveOrder((prev) => (prev?.orderId === id ? null : prev));
         } else {
-          // Vendor updated status to "ready" or "preparing" -> keep open, update status badge
-          if (payload.status === 'ready') {
-            triggerReadyAlert(payload.token);
-          }
-          setOrdersList((prev) => {
-            const next = prev.map((o) => (o.orderId === id ? { ...o, status: payload.status } : o));
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem(storageKey, JSON.stringify(next));
-              } catch {}
-            }
-            return next;
-          });
-          setActiveOrder((prev) => (prev?.orderId === id ? { ...prev, status: payload.status } : prev));
+          // preparing or ready → update badge
+          if (status === 'ready') triggerReadyAlert(token);
+          const next = ordersListRef.current.map((o) => (o.orderId === id ? { ...o, status } : o));
+          setOrdersList(next);
+          try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
+          setActiveOrder((prev) => (prev?.orderId === id ? { ...prev, status } : prev));
         }
-      })
-    );
+      },
+      onDelete: (payload) => {
+        // Defensive: handle unexpected deletions
+        const { id } = payload;
+        const next = ordersListRef.current.filter((o) => o.orderId !== id);
+        setOrdersList(next);
+        try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
+        setActiveOrder((prev) => (prev?.orderId === id ? null : prev));
+      },
+      onReconnect: () => {
+        // Channel reconnected — do ONE reconciliation fetch to catch missed events
+        verifyOrderStatuses(ordersListRef.current);
+      },
+    });
 
     return () => {
-      unsubs.forEach((unsub) => unsub());
+      // Do NOT call rt.unsubscribe() here — let the next subscribe() replace the channel.
+      // Calling unsubscribe on every ordersList change would drop the channel momentarily.
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordersList.map((o) => o.orderId).join(','), storageKey]);
+
+
+  // Clean up on unmount
+  useEffect(() => {
+    const rt = realtimeManagerRef.current;
+    return () => rt.unsubscribe();
+  }, []);
 
   // ── Event handlers ─────────────────────────────────────────────────────────
   const handleItemClick = (item: FoodCardItem) => {
@@ -536,6 +583,7 @@ export default function PublicMenuView({
           whatsapp={whatsapp}
           phone={phone}
           shopId={shopId}
+          shopSlug={shopSlug}
           onClose={() => setShowCart(false)}
           onIncrement={cart.incrementItem}
           onDecrement={cart.decrementItem}

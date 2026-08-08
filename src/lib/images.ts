@@ -8,13 +8,23 @@
  */
 
 function getImageUrl(key: string | null | undefined): string {
-  if (!key) return '';
+  if (!key || typeof key !== 'string') return '';
+  const trimmed = key.trim();
+  if (!trimmed) return '';
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed;
+  }
   const base = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!base) {
-    console.warn('[images] NEXT_PUBLIC_R2_PUBLIC_URL is not set');
-    return '';
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   }
-  return `${base.replace(/\/$/, '')}/${key}`;
+  const cleanKey = trimmed.replace(/^\/+/, '');
+  return `${base.replace(/\/+$/, '')}/${cleanKey}`;
 }
 
 /**
@@ -24,6 +34,7 @@ function getImageUrl(key: string | null | undefined): string {
 export function getMenuImage(key: string | null | undefined): string {
   return getImageUrl(key);
 }
+
 
 /**
  * Returns the public CDN URL for a shop logo.

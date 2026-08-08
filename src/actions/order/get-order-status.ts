@@ -1,8 +1,9 @@
 'use server';
 
-import { inArray } from 'drizzle-orm';
+import { inArray, eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { orders } from '../../../drizzle/schema/orders';
+import { createClient } from '@/lib/supabase/server';
 import type { ActionResponse } from '@/types/action-response';
 
 export type OrderStatusItem = {
@@ -13,15 +14,26 @@ export type OrderStatusItem = {
 };
 
 /**
- * Public action for customer menu:
- * Checks the current live status of the customer's active orders by ID.
- * Returns only the status & timestamps so the customer's bottom bar
- * automatically updates to 'ready' or dismisses when 'completed'.
+ * Public action for customer menu status reconciliation:
+ *
+ * Security:
+ *   - Verifies the customer's authenticated Supabase anonymous session (auth.uid()).
+ *   - Enforces: WHERE orders.id IN (validIds) AND orders.customer_user_id = auth.uid().
+ *   - Prevents unauthorized status lookups of arbitrary order UUIDs.
  */
 export async function getCustomerOrderStatusesAction(
   orderIds: string[],
 ): Promise<ActionResponse<OrderStatusItem[]>> {
   if (!orderIds || orderIds.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  // ── Authenticate customer session ──────────────────────────────────────────
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    // No active customer session — return empty for security
     return { success: true, data: [] };
   }
 
@@ -39,7 +51,12 @@ export async function getCustomerOrderStatusesAction(
         completedAt: orders.completedAt,
       })
       .from(orders)
-      .where(inArray(orders.id, validIds));
+      .where(
+        and(
+          inArray(orders.id, validIds),
+          eq(orders.customerUserId, user.id),
+        ),
+      );
 
     return {
       success: true,
@@ -57,3 +74,4 @@ export async function getCustomerOrderStatusesAction(
     };
   }
 }
+

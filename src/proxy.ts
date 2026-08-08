@@ -11,7 +11,7 @@ const ADMIN_EXACT = '/admin';
 
 // Auth pages — no session required; authenticated users are bounced away
 const VENDOR_AUTH_PAGES = ['/vendor/login', '/vendor/signup'];
-const ADMIN_AUTH_PAGES = ['/admin/login'];
+const ADMIN_AUTH_PAGES = ['/snkdevworksadmin/login'];
 
 const VENDOR_ONBOARDING_PATH = '/vendor/onboarding';
 
@@ -30,7 +30,11 @@ function isVendorPath(pathname: string): boolean {
 }
 
 function isAdminPath(pathname: string): boolean {
-  return pathname === ADMIN_EXACT || pathname.startsWith(ADMIN_PREFIX);
+  return (
+    pathname === ADMIN_EXACT ||
+    pathname.startsWith(ADMIN_PREFIX) ||
+    pathname.startsWith('/snkdevworksadmin')
+  );
 }
 
 function isPublicPath(pathname: string): boolean {
@@ -47,6 +51,17 @@ function isUserOnboarded(user: { user_metadata?: Record<string, unknown> } | nul
   return Boolean(
     meta.onboarding_completed ||
     (meta.shop_name && meta.phone)
+  );
+}
+
+function isUserAdmin(user: { user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown>; role?: string } | null): boolean {
+  if (!user) return false;
+  const meta = user.user_metadata ?? {};
+  const appMeta = user.app_metadata ?? {};
+  return (
+    user.role === 'admin' ||
+    meta.role === 'admin' ||
+    appMeta.role === 'admin'
   );
 }
 
@@ -75,7 +90,7 @@ export async function proxy(request: NextRequest) {
 
   // ── Resolve Supabase session ──────────────────────────────────────────────
   let response = NextResponse.next({ request });
-  let user: { user_metadata?: Record<string, unknown>; role?: string } | null = null;
+  let user: { user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown>; role?: string } | null = null;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -105,12 +120,12 @@ export async function proxy(request: NextRequest) {
   }
 
   const onboarded = isUserOnboarded(user);
+  const isAdmin = isUserAdmin(user);
 
   // ── 1. Root redirect ──────────────────────────────────────────────────────
   // Authenticated users at "/" get sent to their appropriate dashboard.
   // Role-aware: admins go to /admin/dashboard, vendors go to /vendor/* based on onboarding.
   if (user && pathname === '/') {
-    const isAdmin = user.role === 'admin';
     if (isAdmin) {
       return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
@@ -137,6 +152,9 @@ export async function proxy(request: NextRequest) {
 
     if (isAuthPage) {
       // Already logged in → leave auth pages, respect onboarding state
+      if (isAdmin) {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      }
       const dest = onboarded ? '/vendor/dashboard' : VENDOR_ONBOARDING_PATH;
       return NextResponse.redirect(new URL(dest, request.url));
     }
@@ -159,14 +177,19 @@ export async function proxy(request: NextRequest) {
   if (isAdminPath(pathname)) {
     const isAuthPage = ADMIN_AUTH_PAGES.some((p) => pathname.startsWith(p));
 
-    if (!user && !isAuthPage) {
-      const loginUrl = new URL('/admin/login', request.url);
-      loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
-      return NextResponse.redirect(loginUrl);
+    if (isAuthPage) {
+      // Only bounce away to /admin/dashboard if user is logged in AND is an admin
+      if (user && isAdmin) {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      }
+      return response;
     }
 
-    if (user && isAuthPage) {
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+    // Protected admin routes require authentication AND admin role
+    if (!user || !isAdmin) {
+      const loginUrl = new URL('/snkdevworksadmin/login', request.url);
+      loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

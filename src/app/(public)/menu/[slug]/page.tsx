@@ -37,6 +37,7 @@ export default async function MenuSlugPage({
     >
       <PublicMenuView
         shopId={shop.id}
+        shopSlug={slug}
         vendorName={viewModel.vendorName}
         vendorAddress={viewModel.vendorAddress}
         phone={viewModel.phone}

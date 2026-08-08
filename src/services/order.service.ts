@@ -1,75 +1,135 @@
+import { eq, inArray } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { menuItems } from '../../drizzle/schema/menu-items';
 import { shopRepository } from '@/repositories';
 import { orderRepository } from '@/repositories/order.repository';
 import { tableService } from '@/services/table.service';
 import { generateToken } from '@/lib/orders/generate-token';
 import { calculateSubtotal, calculateTotal, toDecimalString } from '@/lib/orders/calculate-total';
 import { isValidTransition } from '@/lib/orders/order-status';
+import { getMenuImage } from '@/lib/images';
 import type { PlaceOrderPayload, LiveOrder, PlacedOrderResult } from '@/types/order';
 import type { OrderStatus } from '@/lib/orders/order-status';
 
 export const orderService = {
   /**
    * Place a new order.
-   * - Validates shop exists
-   * - Resolves tableUuid → tableId + tableLabel snapshot (single DB call)
-   *   Invalid / tampered UUIDs silently fall back to "Counter"
-   * - Generates race-condition-safe token
-   * - Calculates totals
-   * - Inserts order + items in one transaction
+   *
+   * Security-first flow:
+   *   1. Resolve shopSlug → shopId (browser never sends shopId directly)
+   *   2. Reject if customerUserId is null (no anonymous session)
+   *   3. Fetch menu items from DB — name, image, price are snapshots from DB, not browser
+   *   4. Validate each item: exists, belongs to this shop, not sold out
+   *   5. Calculate subtotal + total from DB prices only
+   *   6. Resolve table UUID → tableId + tableLabel snapshot
+   *   7. Generate race-condition-safe token
+   *   8. Insert order + items in one transaction
    */
   async placeOrder(payload: PlaceOrderPayload): Promise<PlacedOrderResult> {
-    const shop = await shopRepository.findById(payload.shopId);
+    // ── 1. Resolve shop from slug ────────────────────────────────────────────
+    const shop = await shopRepository.findBySlug(payload.shopSlug);
     if (!shop) throw new Error('Shop not found');
+    if (!shop.isActive) throw new Error('This shop is currently unavailable');
 
-    // ── Table resolution (ONE query, ONE validation point) ──────────────────
+    // ── 2. Require authenticated customer identity ───────────────────────────
+    if (!payload.customerUserId) {
+      throw new Error('No active customer session. Please refresh and try again.');
+    }
+
+    // ── 3. Fetch menu items from DB — batch fetch all requested item IDs ─────
+    const requestedIds = payload.items.map((i) => i.menuItemId);
+
+    const dbItems = await db
+      .select()
+      .from(menuItems)
+      .where(inArray(menuItems.id, requestedIds));
+
+    // Build a map for O(1) lookup
+    const dbItemMap = new Map(dbItems.map((item) => [item.id, item]));
+
+    // ── 4. Validate each item ────────────────────────────────────────────────
+    const resolvedItems: Array<{
+      menuItemId: string;
+      name:       string;
+      image:      string | null;
+      price:      string;
+      quantity:   number;
+    }> = [];
+
+    for (const requested of payload.items) {
+      const dbItem = dbItemMap.get(requested.menuItemId);
+
+      // Item must exist
+      if (!dbItem) {
+        throw new Error(`Menu item not found. Please refresh and try again.`);
+      }
+
+      // Item must belong to this shop (prevents cross-shop attack)
+      if (dbItem.shopId !== shop.id) {
+        throw new Error(`Item does not belong to this shop.`);
+      }
+
+      // Item must not be sold out
+      if (dbItem.isSoldOut) {
+        throw new Error(`"${dbItem.name}" is currently unavailable. Please remove it from your cart.`);
+      }
+
+      resolvedItems.push({
+        menuItemId: dbItem.id,
+        name:       dbItem.name,
+        image:      dbItem.imageUrl ? (getMenuImage(dbItem.imageUrl) || dbItem.imageUrl) : null,
+        price:      dbItem.price,       // DB value — numeric string e.g. "299.00"
+        quantity:   requested.quantity,
+      });
+
+    }
+
+    // ── 5. Calculate totals from DB prices ───────────────────────────────────
+    const subtotal = calculateSubtotal(
+      resolvedItems.map((i) => ({ price: parseFloat(i.price), quantity: i.quantity }))
+    );
+    const total = calculateTotal(subtotal, 0);
+
+    // ── 6. Table resolution ──────────────────────────────────────────────────
     let resolvedTableId:    string | null = null;
     let resolvedTableLabel: string | null = null;
 
     if (payload.tableUuid) {
-      // Customer arrived via QR — validate the UUID against this shop's tables
-      const table = await tableService.resolveTable(payload.shopId, payload.tableUuid);
+      const table = await tableService.resolveTable(shop.id, payload.tableUuid);
       if (table) {
         resolvedTableId    = table.id;
-        resolvedTableLabel = `Table ${table.label}`;
+        resolvedTableLabel = table.label;
       } else {
         // Tampered / deleted table → silent fallback
-        // orderSource stays 'qr' — analytics must reflect how customer arrived
         resolvedTableLabel = 'Counter';
       }
     } else if (payload.tableLabel) {
-      // Walk-in / manual order with a plain label (no QR validation needed)
       resolvedTableLabel = payload.tableLabel;
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
-    const token    = await generateToken(payload.shopId);
-    const subtotal = calculateSubtotal(payload.items.map((i) => ({ price: i.price, quantity: i.quantity })));
-    const total    = calculateTotal(subtotal, 0);
+    // ── 7. Generate token ────────────────────────────────────────────────────
+    const token = await generateToken(shop.id);
 
+    // ── 8. Insert order + items ──────────────────────────────────────────────
     const order = await orderRepository.create(
       {
-        shopId:        payload.shopId,
+        shopId:         shop.id,
+        customerUserId: payload.customerUserId,
         token,
-        status:        'new',
-        customerName:  payload.customerName  ?? null,
-        customerPhone: payload.customerPhone ?? null,
-        tableId:       resolvedTableId,
-        tableLabel:    resolvedTableLabel,
-        customerNotes: payload.customerNotes ?? null,
-        paymentMethod: payload.paymentMethod ?? 'counter_cash',
-        paymentStatus: 'pending',
-        orderSource:   payload.orderSource,
-        subtotal:      toDecimalString(subtotal),
-        discount:      '0.00',
-        total:         toDecimalString(total),
+        status:         'new',
+        customerName:   payload.customerName  ?? null,
+        customerPhone:  payload.customerPhone ?? null,
+        tableId:        resolvedTableId,
+        tableLabel:     resolvedTableLabel,
+        customerNotes:  payload.customerNotes ?? null,
+        paymentMethod:  payload.paymentMethod ?? 'counter_cash',
+        paymentStatus:  'pending',
+        orderSource:    payload.orderSource,
+        subtotal:       toDecimalString(subtotal),
+        discount:       '0.00',
+        total:          toDecimalString(total),
       },
-      payload.items.map((item) => ({
-        menuItemId: item.menuItemId ?? null,
-        name:       item.name,
-        image:      item.image      ?? null,
-        price:      toDecimalString(item.price),
-        quantity:   item.quantity,
-      })),
+      resolvedItems,
     );
 
     return {

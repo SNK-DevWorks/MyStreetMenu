@@ -20,7 +20,8 @@ interface CartSheetProps {
   vendorAddress: string;
   whatsapp?: string | null;
   phone?: string | null;
-  shopId?: string;
+  shopId?: string;    // kept for legacy compat — prefer shopSlug
+  shopSlug?: string;  // used for order placement (server resolves to shopId)
   onClose: () => void;
   onIncrement: (itemId: string) => void;
   onDecrement: (itemId: string) => void;
@@ -51,6 +52,7 @@ export function CartSheet({
   whatsapp,
   phone,
   shopId,
+  shopSlug,
   onClose,
   onIncrement,
   onDecrement,
@@ -70,6 +72,8 @@ export function CartSheet({
   const [customerPhone, setCustomerPhone] = useState('');
   const [tableNumber, setTableNumber] = useState('');      // display label (for walk-in typed input)
   const [tableUuid, setTableUuid] = useState<string | null>(null); // from ?t= QR param
+  const [tableLabel, setTableLabel] = useState<string | null>(null); // resolved label from QR UUID
+  const [tableLabelLoading, setTableLabelLoading] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [nameError, setNameError] = useState(false);
 
@@ -82,14 +86,27 @@ export function CartSheet({
       const uuid = params.get('t');
       const legacyLabel = params.get('table') || params.get('tableNo') || params.get('tableno') || params.get('table_no');
       if (uuid && uuid.length === 36) {
-        // UUID from a proper QR code — validated by server when order is placed
+        // UUID from a proper QR code — fetch the human-readable label
         setTableUuid(uuid);
+        if (shopId) {
+          setTableLabelLoading(true);
+          fetch(`/api/table-lookup?shopId=${encodeURIComponent(shopId)}&t=${encodeURIComponent(uuid)}`)
+            .then(res => res.ok ? res.json() : null)
+            .then((data: { label?: string } | null) => {
+              if (data?.label) {
+                setTableLabel(data.label);
+                setTableNumber(data.label);
+              }
+            })
+            .catch(() => { /* fail silently — table is still validated server-side */ })
+            .finally(() => setTableLabelLoading(false));
+        }
       } else if (legacyLabel) {
         // Plain label from old-style URLs or manual sharing
         setTableNumber(legacyLabel.trim());
       }
     }
-  }, []);
+  }, [shopId]);
 
   const handlePlaceOrder = async () => {
     if (!customerName.trim()) {
@@ -104,10 +121,11 @@ export function CartSheet({
     const isQR = params?.has('qr');
     const orderSource = isQR ? 'qr' : 'direct_link';
 
-    // If shopId is available, hit the real DB — otherwise fall back to mock
-    if (shopId) {
+    // If shopSlug is available, hit the real DB — otherwise fall back to mock
+    const resolvedSlug = shopSlug ?? shopId; // shopSlug preferred; shopId fallback for legacy
+    if (resolvedSlug) {
       const result = await placeOrderAction({
-        shopId,
+        shopSlug: resolvedSlug,
         orderSource,
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
@@ -116,11 +134,9 @@ export function CartSheet({
         tableLabel: !tableUuid && tableNumber.trim() ? tableNumber.trim() : undefined,
         customerNotes: specialInstructions.trim() || undefined,
         paymentMethod: 'counter_cash',
+        // Only send menuItemId + quantity — server fetches name, image, price from DB
         items: cartItems.map(({ item, quantity }) => ({
           menuItemId: item.id,
-          name: item.title,
-          image: item.image ?? null,
-          price: getItemUnitPrice(item),
           quantity,
         })),
       });
@@ -149,7 +165,7 @@ export function CartSheet({
       setOrderStatus('success');
       onOrderPlaced?.(placedOrder);
     } else {
-      // No shopId — dev/preview fallback with fake token
+      // No shopSlug/shopId — dev/preview fallback with fake token
       const fallbackToken = 'A' + Math.floor(20 + Math.random() * 70);
       const placedOrder: ActiveOrder = {
         tokenNumber: fallbackToken,
@@ -176,9 +192,36 @@ export function CartSheet({
     });
   };
 
+  // ── Dynamic status badge for a single order (Clean Linear Style, No Dot) ──
+  const OrderStatusBadge = ({ status }: { status?: string }) => {
+    if (status === 'ready') {
+      return (
+        <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 tracking-tight">
+          Order Ready
+        </span>
+
+      );
+    }
+    if (status === 'preparing') {
+      return (
+        <span className="inline-flex items-center text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 tracking-tight">
+          Preparing
+        </span>
+      );
+    }
+    // new / received / fallback
+    return (
+      <span className="inline-flex items-center text-[11px] font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 tracking-tight">
+        Order Received
+      </span>
+    );
+  };
+
+
+
   // ── Success / View Order Screen ──────────────────────────────────────────
   if (orderStatus === 'success') {
-    const allOrders = ordersList.length > 0
+    const rawOrders = ordersList.length > 0
       ? ordersList
       : (activeOrder ? [activeOrder] : [{
           tokenNumber: '—',
@@ -192,8 +235,16 @@ export function CartSheet({
           specialInstructions: specialInstructions.trim() || undefined,
         }]);
 
-    const latestOrder = allOrders[allOrders.length - 1];
+    // Order newest first (most recent order at the top)
+    const allOrders = [...rawOrders].reverse();
+
     const grandTotal = allOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+
+    // Summary counts for multi-order header
+    const readyCount    = allOrders.filter(o => o.status === 'ready').length;
+    const prepCount     = allOrders.filter(o => o.status === 'preparing').length;
+    const receivedCount = allOrders.filter(o => !o.status || o.status === 'new').length;
+
 
     return (
       <div className="fixed inset-0 z-50 bg-[#FDFBF7] flex flex-col overflow-y-auto animate-in fade-in duration-300 p-4 sm:p-6">
@@ -229,6 +280,28 @@ export function CartSheet({
             ))}
           </div>
 
+          {/* Multi-order summary pill — only shows when multiple orders and at least one is non-new */}
+          {allOrders.length > 1 && (readyCount > 0 || prepCount > 0) && (
+            <div className="flex items-center gap-1.5 flex-wrap justify-center mt-2 mb-1">
+              {readyCount > 0 && (
+                <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/25">
+                  {readyCount} Ready
+                </span>
+              )}
+              {prepCount > 0 && (
+                <span className="text-[11px] font-semibold text-amber-800 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/25">
+                  {prepCount} Preparing
+                </span>
+              )}
+              {receivedCount > 0 && (
+                <span className="text-[11px] font-medium text-slate-700 bg-slate-100/90 px-2.5 py-0.5 rounded-full border border-slate-200/80 shadow-2xs">
+                  {receivedCount} Received
+                </span>
+              )}
+            </div>
+          )}
+
+
           <p className="text-xs text-gray-400 font-medium mt-0.5 mb-4">
             Estimated time: 15 mins
           </p>
@@ -253,9 +326,8 @@ export function CartSheet({
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      Confirmed
-                    </span>
+                    {/* Dynamic status badge — updates live via Realtime */}
+                    <OrderStatusBadge status={ord.status} />
                   </div>
 
                   {/* Items List */}
@@ -401,14 +473,36 @@ export function CartSheet({
             <label className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
               <Utensils size={14} className="text-[#FF6B00]" />
               Table Number
+              {tableUuid && tableLabel && (
+                <span className="ml-auto text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full normal-case tracking-normal">
+                  Auto-filled from QR
+                </span>
+              )}
             </label>
-            <input
-              type="text"
-              placeholder="e.g. 5, T-12"
-              value={tableNumber}
-              onChange={e => setTableNumber(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 focus:border-[#FF6B00] rounded-xl px-3.5 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white transition-all font-medium"
-            />
+            {tableUuid ? (
+              // QR scan: show locked field with pre-filled label
+              <div className="relative">
+                <input
+                  type="text"
+                  value={tableLabelLoading ? 'Loading...' : (tableLabel ?? tableNumber)}
+                  readOnly
+                  disabled={tableLabelLoading}
+                  className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-700 font-semibold cursor-not-allowed select-none"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Locked
+                </div>
+              </div>
+            ) : (
+              // Walk-in: allow manual entry
+              <input
+                type="text"
+                placeholder="e.g. 5, T-12"
+                value={tableNumber}
+                onChange={e => setTableNumber(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 focus:border-[#FF6B00] rounded-xl px-3.5 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white transition-all font-medium"
+              />
+            )}
           </div>
 
           {/* Phone (Optional) */}

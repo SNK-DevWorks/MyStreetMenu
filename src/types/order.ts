@@ -53,21 +53,25 @@ export interface PlacedOrderResult {
 
 /**
  * Input to place a new order (after validation via validate-order.ts).
+ *
+ * Security rules:
+ *   - shopSlug (not shopId): server resolves slug → shopId. Browser never nominates a shopId directly.
+ *   - customerUserId: resolved server-side from Supabase session. Never accepted from browser.
+ *   - items carry only menuItemId + quantity. Server fetches name, image, price from menu_items DB.
  */
 export interface PlaceOrderPayload {
-  shopId:        string;
+  shopSlug:      string;        // server resolves to shopId — browser sends slug, not UUID
+  customerUserId: string;       // resolved server-side from auth session; never from browser
   orderSource:   'qr' | 'direct_link' | 'manual' | 'admin';
   customerName?: string;
   customerPhone?: string;
-  tableUuid?:    string;   // UUID from ?t= param — validated server-side
-  tableLabel?:   string;   // fallback plain label (walk-in, manual orders)
+  tableUuid?:    string;        // UUID from ?t= param — validated server-side
+  tableLabel?:   string;        // fallback plain label (walk-in, manual orders)
   customerNotes?: string;
   paymentMethod?: 'counter_cash' | 'counter_card' | 'counter_upi' | 'online_upi' | 'online_card';
   items: Array<{
-    menuItemId?: string | null;
-    name:        string;
-    image?:      string | null;
-    price:       number;
-    quantity:    number;
+    menuItemId: string;         // DB UUID — server fetches name, image, price
+    quantity:   number;
   }>;
 }
+
